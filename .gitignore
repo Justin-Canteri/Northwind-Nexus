@@ -1,0 +1,27 @@
+# Entorno Virtual (Lo que mencionaste)
+env/
+venv/
+.venv/
+bin/
+lib/
+share/
+
+# Base de Datos Local
+db.sqlite3
+*.db
+
+# Secretos (¡Vital!)
+.env
+
+# Archivos temporales de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Carpetas de editores (VS Code o PyCharm)
+.vscode/
+.idea/
+
+# Archivos del sistema
+.DS_Store
+thumbs.db
