@@ -94,9 +94,7 @@ WSGI_APPLICATION = 'configuracion.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    'default': env.db() # Esta es una forma rápida de django-environ 
-}
+
 
 DATABASES = {
     'default': {
