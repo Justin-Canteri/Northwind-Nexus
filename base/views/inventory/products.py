@@ -2,12 +2,10 @@ import json
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.http import HttpResponse
-from .models import Producto  # Tu "mapa"
+from ...models.inventory import Producto  # Tu "mapa"
 from django.views.decorators.csrf import csrf_exempt #para que postman entre sin seguridad
 
 # Create your views here.
-def inicio(request):
-    return HttpResponse('Pagina de inicio')
 
 def buscar(request):
     # 1. Obtenemos el parámetro de la URL: ?nombre=Chai
