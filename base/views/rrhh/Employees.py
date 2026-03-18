@@ -3,105 +3,72 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from ...models.rrhh import Employee
 
-def buscar_empleados(request):
-    # 1. Filtramos por apellido o ciudad
-    apellido = request.GET.get('apellido')
-    ciudad = request.GET.get('ciudad')
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from ..permissions import IsRRHH  # Importamos tu clase nueva
 
-    if apellido:
-        resultados = Employee.objects.filter(last_name__icontains=apellido)
-    elif ciudad:
-        resultados = Employee.objects.filter(city__icontains=ciudad)
-    else:
-        # Traemos todos los empleados
-        resultados = Employee.objects.all()
+class EmployeeListCreateView(APIView):
+    # EL ESCUDO: Aplica para TODO lo que esté aquí adentro
+    permission_classes = [IsAuthenticated, IsRRHH]
+
+    def get(self, request):
+        # 1. Traemos los datos de la DB
+        empleados = Employee.objects.all()
         
-    # 3. Respuesta en HTML
-    respuesta_texto = "<h1>Nómina de Empleados Northwind:</h1><ul>"
-    
-    for e in resultados:
-        # Manejo de la relación recursiva para mostrar quién es el jefe
-        jefe = f" (Reporta a: {e.reports_to.first_name})" if e.reports_to else " (Es Gerente)"
-        respuesta_texto += f"<li>ID: {e.id} - {e.first_name} {e.last_name} - Cargo: {e.title}{jefe}</li>"
-    
-    respuesta_texto += "</ul>"
+        # 2. Creamos una lista para responder (puedes usar un Serializer luego)
+        data = []
+        for e in empleados:
+            data.append({
+                "id": e.id,
+                "nombre": f"{e.first_name} {e.last_name}",
+                "cargo": e.title
+            })
+        
+        # 3. Solo si eres RRHH llegarás a ver este Response
+        return Response(data)
 
-    return HttpResponse(respuesta_texto)
-
-@csrf_exempt
-def crear_empleado(request):
-    if request.method == 'POST':
+    def post(self, request):
+        # Aquí pegamos tu lógica de "crear_empleado"
         try:
-            datos = json.loads(request.body)
-
-            # Creamos el empleado (el ID es AutoField, no se envía)
+            datos = request.data # DRF ya te da el JSON listo en 'request.data'
             nuevo_empleado = Employee.objects.create(
                 first_name=datos.get('first_name'),
                 last_name=datos.get('last_name'),
                 title=datos.get('title'),
-                birth_date=datos.get('birth_date'),
-                hire_date=datos.get('hire_date'),
                 city=datos.get('city'),
                 country=datos.get('country'),
-                reports_to_id=datos.get('reports_to_id') # Pasamos el ID del jefe
+                reports_to_id=datos.get('reports_to_id')
             )
-
-            return JsonResponse({
+            return Response({
                 "mensaje": "Empleado registrado con éxito",
-                "id_asignado": nuevo_empleado.id,
-                "nombre_completo": f"{nuevo_empleado.first_name} {nuevo_empleado.last_name}"
+                "id_asignado": nuevo_empleado.id
             }, status=201)
-
         except Exception as e:
-            return JsonResponse({"error": str(e)}, status=400)
+            return Response({"error": str(e)}, status=400)
 
-    return JsonResponse({"error": "Solo se permite POST"}, status=405)
+class EmployeeDetailView(APIView):
+    # El mismo escudo de seguridad
+    permission_classes = [IsAuthenticated, IsRRHH]
 
-@csrf_exempt
-def editar_empleado(request, id_empleado):
-    if request.method == 'PUT':
+    def put(self, request, id_empleado):
         try:
             e = Employee.objects.get(id=id_empleado)
-            datos = json.loads(request.body)
-
-            # Actualizamos campos básicos
+            datos = request.data  # Usamos request.data de DRF
+            
             e.first_name = datos.get('first_name', e.first_name)
             e.last_name = datos.get('last_name', e.last_name)
             e.title = datos.get('title', e.title)
-            e.city = datos.get('city', e.city)
-            e.reports_to_id = datos.get('reports_to_id', e.reports_to_id)
-
             e.save()
-
-            return JsonResponse({
-                "mensaje": f"Empleado {id_empleado} actualizado",
-                "datos_actuales": {
-                    "nombre": f"{e.first_name} {e.last_name}",
-                    "cargo": e.title
-                }
-            })
-
+            
+            return Response({"mensaje": f"Empleado {id_empleado} actualizado"})
         except Employee.DoesNotExist:
-            return JsonResponse({"error": "El empleado no existe"}, status=404)
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=400)
+            return Response({"error": "No existe"}, status=404)
 
-    return JsonResponse({"error": "Solo se permite PUT"}, status=405)
-
-@csrf_exempt
-def eliminar_empleado(request, id_empleado):
-    if request.method == 'DELETE':
+    def delete(self, request, id_empleado):
         try:
             e = Employee.objects.get(id=id_empleado)
             e.delete()
-            return JsonResponse({"mensaje": f"Empleado {id_empleado} eliminado"})
-        except Employee.DoesNotExist:
-            return JsonResponse({"error": "No existe"}, status=404)
-        except Exception as e:
-            # Error común: No puedes borrar a un jefe si tiene empleados a cargo
-            # o si el empleado ya realizó ventas (Orders).
-            return JsonResponse({
-                "error": "No se puede eliminar: el empleado tiene subordinados o registros de ventas"
-            }, status=400)
-
-    return JsonResponse({"error": "Solo se permite DELETE"}, status=405)
+            return Response({"mensaje": f"Empleado {id_empleado} eliminado"})
+        except Exception:
+            return Response({"error": "No se puede eliminar: tiene datos asociados"}, status=400)

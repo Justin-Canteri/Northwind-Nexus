@@ -36,15 +36,32 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 #----------------------------- DB
 
+#-----------------------------------------token
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
+
+# Configuración personalizada de los Tokens
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),  # El token sirve por 1 hora
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),     # Puedes pedir llaves nuevas por 1 día
+    'AUTH_HEADER_TYPES': ('Bearer',),                # Se usa como: Bearer <tu_token>
+}
+#------------------------------------------------
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-8k5nff%7-13yws9a1(2g0yg1!))8=q9baql6a#$)qfls^9h&6@'
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG') == 'True'
 
 ALLOWED_HOSTS = []
 

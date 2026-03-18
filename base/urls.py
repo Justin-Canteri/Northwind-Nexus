@@ -1,16 +1,17 @@
 from django.urls import path
-from .views import views
+from .views import views, register
 #inventory
 from .views.inventory import products, categories, suppliers
 #rrhh
 from .views.rrhh import Employees, EmployeeTerritories, Region, Territories
+from .views.rrhh.Employees import EmployeeListCreateView, EmployeeDetailView
 #ventas
 from .views.ventas import Customers, Order_Details, Orders, Shippers
-from .views.rrhh import recursos_h
 
 urlpatterns = [
     path('', views.inicio),
 
+    path('api/register/', register.registrar_usuario),
     #---------------------inventory-----------------------------------
     #productos
     path('productos/buscar/', products.buscar),
@@ -33,15 +34,18 @@ urlpatterns = [
 
     #---------------------rrhh-----------------------------------
     #employees
-    path('employees/buscar/', Employees.buscar_empleados),
-    path('employees/crear/', Employees.crear_empleado),
-    path('employees/borrar/<int:id_empleado>/', Employees.eliminar_empleado),
-    path('employees/editar/<int:id_empleado>/', Employees.editar_empleado),
+    path('employees/', EmployeeListCreateView.as_view(), name='empleados-lista-crear'),
+    # urls.py
+    path('employees/<int:id_empleado>/', EmployeeDetailView.as_view()),
+    #path('employees/buscar/', Employees.buscar_empleados),
+    #path('employees/crear/', Employees.crear_empleado),
+    #path('employees/borrar/<int:id_empleado>/', Employees.eliminar_empleado),
+    #path('employees/editar/<int:id_empleado>/', Employees.editar_empleado),
 
     #EmployeeTerritories
     path('employeeTerritories/buscar/', EmployeeTerritories.buscar_asignaciones),
     path('employeeTerritories/crear/', EmployeeTerritories.asignar_territorio),
-    path('employeeTerritories/borrar/<int:id_empleado,id_territorio>/', EmployeeTerritories.eliminar_asignacion),
+    path('employeeTerritories/borrar/<int:id_empleado>/<str:id_territorio>/', EmployeeTerritories.eliminar_asignacion),
 
     #Region
     path('region/buscar/', Region.buscar_regiones),
@@ -60,26 +64,26 @@ urlpatterns = [
     #Customers
     path('customers/buscar/', Customers.buscar_clientes),
     path('customers/crear/', Customers.crear_cliente),
-    path('customers/borrar/<int:id_cliente>', Customers.eliminar_cliente),
-    path('customers/editar/<int: id_cliente>', Customers.editar_cliente),
+    path('customers/borrar/<int:id_cliente>/', Customers.eliminar_cliente),
+    path('customers/editar/<int:id_cliente>/', Customers.editar_cliente),
 
     #Order_details
     path('order_details/buscar/', Order_Details.buscar_detalles),
     path('order_details/crear/', Order_Details.crear_detalle),
-    path('order_details/borrar/<int:id_orden, id_producto> ', Order_Details.eliminar_detalle),
-    path('order_details/editar/<int: id_orden, id_producto>', Order_Details.editar_detalle),
+    path('order_details/borrar/<int:id_orden>/<int:id_producto>/ ', Order_Details.eliminar_detalle),
+    path('order_details/editar/<int:id_orden>/<int:id_producto>/', Order_Details.editar_detalle),
 
     #Orders
     path('orders/buscar/', Orders.buscar),
     path('orders/crear/', Orders.crear_order),
     path('orders/borrar/<int:id_order>', Orders.eliminar_order),
-    path('orders/editar/<int: id_order>', Orders.editar_order),
+    path('orders/editar/<int:id_order>', Orders.editar_order),
 
     #Shippers
     path('shippers/buscar/', Shippers.buscar_shippers),
     path('shippers/crear/', Shippers.crear_shipper),
     path('shippers/borrar/<int:id_shipper>', Shippers.eliminar_shipper),
-    path('shippers/editar/<int: id_shipper>', Shippers.editar_shipper),
+    path('shippers/editar/<int:id_shipper>', Shippers.editar_shipper),
     #---------------------ventas-----------------------------------
 
     ]
