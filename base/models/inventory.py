@@ -9,8 +9,22 @@ class Producto(models.Model):
     # Mapa completo de la tabla 'products' de Northwind
     id = models.AutoField(primary_key=True, db_column='product_id')
     nombre = models.CharField(max_length=40, db_column='product_name')
-    proveedor_id = models.IntegerField(db_column='supplier_id', null=True)
-    categoria_id = models.IntegerField(db_column='category_id', null=True)
+    #relacion con el modelo de la tabla supplier
+    proveedor = models.ForeignKey(
+        'Supplier',
+        db_column='supplier_id',  # ← le decís qué columna usar en la BD
+        null=True,
+        on_delete=models.DO_NOTHING,  # DO_NOTHING porque managed = False
+        related_name='productos_proveedor'
+    )
+    #relacion con el modelo de la tabla categoria
+    categoria= models.ForeignKey(
+        'categories',
+        db_column='category_id',  # ← le decís qué columna usar en la BD
+        null=True,
+        on_delete=models.DO_NOTHING,  # DO_NOTHING porque managed = False
+        related_name='productos_categoria'
+    )
     cantidad_por_unidad = models.CharField(max_length=20, db_column='quantity_per_unit', null=True)
     precio = models.DecimalField(max_digits=10, decimal_places=2, db_column='unit_price')
     stock = models.SmallIntegerField(db_column='units_in_stock')

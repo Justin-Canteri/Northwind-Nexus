@@ -14,22 +14,16 @@ urlpatterns = [
     path('api/register/', register.registrar_usuario),
     #---------------------inventory-----------------------------------
     #productos
-    path('productos/buscar/', products.buscar),
-    path('productos/crear/', products.crear_producto),
-    path('productos/borrar/<int:id_producto>/', products.delete_producto),
-    path('productos/editar/<int:id_producto>/', products.editar_producto),
-
+    path('productos/', products.productsListCreateView.as_view()),
+    path('productos/<int:id_producto>/', products.productsDetailView.as_view()),
+    
     #categorias
-    path('categorias/buscar/', categories.buscar),
-    path('categorias/crear/', categories.crear_categoria),
-    path('categorias/borrar/<int:id_producto>/', categories.delete_categoria),
-    path('categorias/editar/<int:id_producto>/', categories.editar_categoria),
+    path('categorias/', categories.CategoriesListCreateView.as_view()),
+    path('categorias/<int:id_producto>/', categories.CategoriesDetailsView.as_view()),
 
     #suppliers
-    path('suppliers/buscar/', suppliers.buscar),
-    path('suppliers/crear/', suppliers.crear_supplier),
-    path('suppliers/borrar/<int:id_suppler>/', suppliers.delete_supplier),
-    path('suppliers/editar/<int:id_suppler>/', suppliers.editar_supplier),
+    path('suppliers/buscar/', suppliers.suppliersListCreateView.as_view()),
+    path('suppliers/borrar/<int:id_suppler>/', suppliers.suppliersDetailView.as_view()),
     #---------------------inventory-----------------------------------
 
     #---------------------rrhh-----------------------------------
@@ -43,9 +37,9 @@ urlpatterns = [
     #path('employees/editar/<int:id_empleado>/', Employees.editar_empleado),
 
     #EmployeeTerritories
-    path('employeeTerritories/buscar/', EmployeeTerritories.buscar_asignaciones),
-    path('employeeTerritories/crear/', EmployeeTerritories.asignar_territorio),
-    path('employeeTerritories/borrar/<int:id_empleado>/<str:id_territorio>/', EmployeeTerritories.eliminar_asignacion),
+    #path('employeeTerritories/buscar/', EmployeeTerritories.buscar_asignaciones),
+    #path('employeeTerritories/crear/', EmployeeTerritories.asignar_territorio),
+    #path('employeeTerritories/borrar/<int:id_empleado>/<str:id_territorio>/', EmployeeTerritories.eliminar_asignacion),
 
     #Region
     path('region/buscar/', Region.buscar_regiones),

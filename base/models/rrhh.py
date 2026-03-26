@@ -14,7 +14,12 @@ class Region(models.Model):
 class Territory(models.Model):
     id = models.CharField(db_column='territory_id', primary_key=True, max_length=20)
     description = models.CharField(db_column='territory_description', max_length=50)
-    region = models.ForeignKey(Region, models.DO_NOTHING, db_column='region_id')
+    region = models.ForeignKey('Region',  
+                               db_column='region_id',
+                               null=True,
+                               on_delete=models.DO_NOTHING,
+                               related_name='region_employee'
+                               )
 
     class Meta:
         managed = False
@@ -41,7 +46,14 @@ class Employee(models.Model):
     photo = models.BinaryField(db_column='photo', blank=True, null=True)
     notes = models.TextField(db_column='notes', blank=True, null=True)
     # Relación recursiva: un empleado reporta a otro empleado
-    reports_to = models.ForeignKey('self', models.DO_NOTHING, db_column='reports_to', blank=True, null=True)
+    reports_to = models.ForeignKey(
+            'self',
+            models.DO_NOTHING,
+            db_column='reports_to',
+            blank=True,
+            null=True,
+            related_name='subordinados'  # ← así podés hacer empleado.subordinados.all()
+        )
     photo_path = models.CharField(db_column='photo_path', max_length=255, blank=True, null=True)
 
     class Meta:
@@ -53,8 +65,13 @@ class Employee(models.Model):
 
 class EmployeeTerritory(models.Model):
     # Esta es una tabla intermedia para la relación Many-to-Many entre Empleados y Territorios
-    employee = models.ForeignKey(Employee, models.DO_NOTHING, db_column='employee_id', primary_key=True)
-    territory = models.ForeignKey(Territory, models.DO_NOTHING, db_column='territory_id')
+    employee = models.ForeignKey(Employee, models.DO_NOTHING, db_column='employee_id')
+    territory = models.ForeignKey('Territory',
+                                  db_column='territory_id',
+                                  null= True, 
+                                  on_delete=models.DO_NOTHING,
+                                  related_name= 'territory_employee'
+                                  )
 
     class Meta:
         managed = False

@@ -3,6 +3,35 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from ...models.rrhh import EmployeeTerritory
 
+#Autenticacion y permisos
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from ..permissions import IsRRHH  # Importamos tu clase nueva
+
+#serializer
+from ...serializers import EmployeeTerritorySerializer
+
+
+class EmployeeTerritoriesCreateView(APIView):
+    permission_classes = [IsAuthenticated, IsRRHH]
+
+    def get(self, request):
+        
+        territorios = EmployeeTerritory.objects.all()
+
+        serializer = EmployeeTerritorySerializer(territorios, many = True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = EmployeeTerritorySerializer(data = request.data)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, satatus = 201)
+        
+        return Response(serializer.errors, status=400)
+'''
 def buscar_asignaciones(request):
     # 1. Podemos filtrar por empleado o por territorio
     emp_id = request.GET.get('empleado')
@@ -68,3 +97,4 @@ def eliminar_asignacion(request, id_empleado, id_territorio):
             return JsonResponse({"error": str(e)}, status=400)
 
     return JsonResponse({"error": "Solo se permite DELETE"}, status=405)
+    '''
