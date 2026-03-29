@@ -26,7 +26,7 @@ class IsVentas(permissions.BasePermission):
 #permiso para inventario
 class PremissionInventory(permissions.BasePermission):
     """
-    Permite el acceso solo a usuarios en el grupo 'Ventas'.
+    Permite el acceso solo a usuarios en el grupo 'inventario'.
     """
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:

@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inventario — Northwind Nexus</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: #2a2a3e;
+    --accent: #00e5a0;
+    --accent2: #7c5cfc;
+    --accent3: #ff6b6b;
+    --accent4: #f0a500;
+    --text: #e8e8f0;
+    --text-muted: #6b6b88;
+    --font-display: 'Syne', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-display);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,160,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,160,0.02) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ── NAV ── */
+  .nav {
+    position: sticky; top: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 2rem;
+    background: rgba(10,10,15,0.9); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-logo { font-weight: 800; font-size: 1.1rem; letter-spacing: -0.02em; cursor: pointer; }
+  .nav-logo span { color: var(--accent); }
+  .nav-logo small { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-muted); margin-left: 8px; letter-spacing: 0.08em; }
+  .nav-right { display: flex; align-items: center; gap: 1rem; }
+  .nav-user { font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-muted); }
+  .nav-user span { color: var(--accent); }
+  .btn-logout {
+    font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);
+    background: transparent; border: 1px solid var(--border); padding: 6px 14px;
+    border-radius: 6px; cursor: pointer; transition: all 0.2s;
+  }
+  .btn-logout:hover { border-color: var(--accent3); color: var(--accent3); }
+
+  /* ── LAYOUT ── */
+  .layout { display: flex; flex: 1; position: relative; z-index: 1; }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 220px; min-height: calc(100vh - 57px);
+    background: var(--surface); border-right: 1px solid var(--border);
+    padding: 1.5rem 0; flex-shrink: 0;
+  }
+  .sidebar-section { margin-bottom: 0.5rem; }
+  .sidebar-label {
+    font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-muted);
+    letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 0 1.2rem; margin-bottom: 0.5rem; display: block;
+  }
+  .sidebar-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 1.2rem; cursor: pointer;
+    font-size: 0.875rem; font-weight: 600;
+    color: var(--text-muted); transition: all 0.15s;
+    border-left: 2px solid transparent;
+  }
+  .sidebar-item:hover { color: var(--text); background: var(--surface2); }
+  .sidebar-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(0,229,160,0.05); }
+  .sidebar-item .icon { font-size: 1rem; width: 20px; text-align: center; }
+
+  /* ── MAIN ── */
+  .main { flex: 1; padding: 2rem; overflow-x: auto; }
+
+  /* ── MODULE HEADER ── */
+  .module-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;
+    animation: fadeUp 0.4s ease both;
+  }
+  .module-title h1 { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em; }
+  .module-title p { font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
+
+  .btn {
+    font-family: var(--font-display); font-weight: 700; font-size: 0.82rem;
+    padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer;
+    transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn-primary { background: var(--accent); color: #0a0a0f; }
+  .btn-primary:hover { background: #00ffb3; transform: translateY(-1px); }
+  .btn-danger { background: rgba(255,107,107,0.1); color: var(--accent3); border: 1px solid rgba(255,107,107,0.2); }
+  .btn-danger:hover { background: rgba(255,107,107,0.2); }
+  .btn-edit { background: rgba(124,92,252,0.1); color: var(--accent2); border: 1px solid rgba(124,92,252,0.2); font-size: 0.75rem; padding: 6px 12px; }
+  .btn-edit:hover { background: rgba(124,92,252,0.2); }
+  .btn-sm { font-size: 0.75rem; padding: 6px 14px; }
+
+  /* ── SEARCH BAR ── */
+  .toolbar {
+    display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; flex-wrap: wrap;
+    animation: fadeUp 0.4s 0.1s ease both;
+  }
+  .search-wrap { position: relative; flex: 1; min-width: 200px; }
+  .search-wrap input {
+    width: 100%; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 16px 10px 38px;
+    color: var(--text); font-family: var(--font-mono); font-size: 0.85rem;
+    outline: none; transition: border-color 0.2s;
+  }
+  .search-wrap input:focus { border-color: var(--accent); }
+  .search-wrap::before { content: '⌕'; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 1rem; }
+
+  /* ── TABLE ── */
+  .table-wrap {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    overflow: hidden; animation: fadeUp 0.4s 0.15s ease both;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: var(--surface2); }
+  th {
+    font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted);
+    letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 12px 16px; text-align: left; font-weight: 500;
+    border-bottom: 1px solid var(--border);
+  }
+  td { padding: 13px 16px; font-size: 0.875rem; border-bottom: 1px solid rgba(42,42,62,0.5); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .td-mono { font-family: var(--font-mono); font-size: 0.82rem; }
+  .td-id { color: var(--text-muted); font-family: var(--font-mono); font-size: 0.78rem; }
+
+  .badge-cat {
+    display: inline-block; background: rgba(124,92,252,0.12); color: var(--accent2);
+    border: 1px solid rgba(124,92,252,0.2); font-family: var(--font-mono);
+    font-size: 0.7rem; padding: 3px 10px; border-radius: 100px;
+  }
+  .badge-supplier {
+    display: inline-block; background: rgba(0,229,160,0.08); color: var(--accent);
+    border: 1px solid rgba(0,229,160,0.15); font-family: var(--font-mono);
+    font-size: 0.7rem; padding: 3px 10px; border-radius: 100px;
+  }
+
+  .td-actions { display: flex; gap: 6px; }
+
+  /* ── LOADING / EMPTY ── */
+  .state-box {
+    text-align: center; padding: 4rem 2rem;
+    font-family: var(--font-mono); color: var(--text-muted); font-size: 0.85rem;
+  }
+  .state-box .icon { font-size: 2rem; margin-bottom: 1rem; display: block; }
+  .spinner-inline {
+    display: inline-block; width: 20px; height: 20px;
+    border: 2px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center; padding: 1rem;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+    padding: 2rem; width: 100%; max-width: 480px;
+    animation: fadeUp 0.3s ease both;
+  }
+  .modal h3 { font-size: 1.2rem; font-weight: 800; margin-bottom: 1.5rem; }
+  .form-group { margin-bottom: 1rem; }
+  .form-group label { display: block; font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 6px; }
+  .form-group input, .form-group select {
+    width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 14px; color: var(--text); font-family: var(--font-mono); font-size: 0.85rem;
+    outline: none; transition: border-color 0.2s;
+  }
+  .form-group input:focus, .form-group select:focus { border-color: var(--accent); }
+  .form-group select option { background: var(--surface); }
+  .modal-actions { display: flex; gap: 0.75rem; margin-top: 1.5rem; justify-content: flex-end; }
+  .btn-cancel { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+  .btn-cancel:hover { border-color: var(--text-muted); color: var(--text); }
+
+  /* ── ALERT ── */
+  .toast {
+    position: fixed; bottom: 2rem; right: 2rem; z-index: 300;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 20px; font-family: var(--font-mono); font-size: 0.82rem;
+    display: none; animation: fadeUp 0.3s ease;
+    max-width: 340px;
+  }
+  .toast.show { display: block; }
+  .toast.success { border-color: rgba(0,229,160,0.3); color: var(--accent); }
+  .toast.error { border-color: rgba(255,107,107,0.3); color: var(--accent3); }
+
+  /* ── ACCESS DENIED ── */
+  #access-denied {
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; text-align: center; gap: 1rem; padding: 2rem;
+  }
+  #access-denied.show { display: flex; }
+  #access-denied h2 { font-size: 2rem; font-weight: 800; }
+  #access-denied p { font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted); }
+
+  @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .main { padding: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ACCESS DENIED -->
+<div id="access-denied">
+  <div style="font-size:3rem">🔒</div>
+  <h2>Acceso denegado</h2>
+  <p>No tenés permisos para acceder al módulo de Inventario.<br>Contactá a un administrador.</p>
+  <button class="btn btn-primary" onclick="window.location.href='/'">← Volver al inicio</button>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none; flex-direction:column; min-height:100vh;">
+
+  <nav class="nav">
+    <div>
+      <span class="nav-logo" onclick="window.location.href='/'">Northwind<span>Nexus</span></span>
+      <small class="nav-logo" style="font-size:0.7rem; color:var(--text-muted); font-family:var(--font-mono)">/ inventario</small>
+    </div>
+    <div class="nav-right">
+      <span class="nav-user">Usuario: <span id="nav-username">—</span></span>
+      <button class="btn-logout" onclick="logout()">Cerrar sesión</button>
+    </div>
+  </nav>
+
+  <div class="layout">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <span class="sidebar-label">Módulos</span>
+        <div class="sidebar-item active" id="nav-productos" onclick="switchModule('productos')">
+          <span class="icon">📦</span> Productos
+        </div>
+        <div class="sidebar-item" id="nav-categorias" onclick="switchModule('categorias')">
+          <span class="icon">🏷️</span> Categorías
+        </div>
+        <div class="sidebar-item" id="nav-suppliers" onclick="switchModule('suppliers')">
+          <span class="icon">🏭</span> Suppliers
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+
+      <!-- ══ PRODUCTOS ══ -->
+      <section id="mod-productos">
+        <div class="module-header">
+          <div class="module-title">
+            <h1>📦 Productos</h1>
+            <p>Gestión completa del catálogo de productos</p>
+          </div>
+          <button class="btn btn-primary" onclick="openModal('modal-producto', null)">+ Nuevo producto</button>
+        </div>
+        <div class="toolbar">
+          <div class="search-wrap">
+            <input type="text" id="search-productos" placeholder="Buscar producto..." oninput="filterTable('productos')" />
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table id="table-productos">
+            <thead>
+              <tr>
+                <th>#</th><th>Nombre</th><th>Categoría</th><th>Proveedor</th>
+                <th>Precio</th><th>Stock</th><th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-productos">
+              <tr><td colspan="7"><div class="state-box"><span class="spinner-inline"></span></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ══ CATEGORÍAS ══ -->
+      <section id="mod-categorias" style="display:none">
+        <div class="module-header">
+          <div class="module-title">
+            <h1>🏷️ Categorías</h1>
+            <p>Categorías de productos del inventario</p>
+          </div>
+          <button class="btn btn-primary" onclick="openModal('modal-categoria', null)">+ Nueva categoría</button>
+        </div>
+        <div class="toolbar">
+          <div class="search-wrap">
+            <input type="text" id="search-categorias" placeholder="Buscar categoría..." oninput="filterTable('categorias')" />
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table id="table-categorias">
+            <thead>
+              <tr><th>#</th><th>Nombre</th><th>Descripción</th><th>Acciones</th></tr>
+            </thead>
+            <tbody id="tbody-categorias">
+              <tr><td colspan="4"><div class="state-box"><span class="spinner-inline"></span></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ══ SUPPLIERS ══ -->
+      <section id="mod-suppliers" style="display:none">
+        <div class="module-header">
+          <div class="module-title">
+            <h1>🏭 Suppliers</h1>
+            <p>Proveedores registrados en el sistema</p>
+          </div>
+          <button class="btn btn-primary" onclick="openModal('modal-supplier', null)">+ Nuevo proveedor</button>
+        </div>
+        <div class="toolbar">
+          <div class="search-wrap">
+            <input type="text" id="search-suppliers" placeholder="Buscar proveedor..." oninput="filterTable('suppliers')" />
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table id="table-suppliers">
+            <thead>
+              <tr><th>#</th><th>Empresa</th><th>Contacto</th><th>País</th><th>Teléfono</th><th>Acciones</th></tr>
+            </thead>
+            <tbody id="tbody-suppliers">
+              <tr><td colspan="6"><div class="state-box"><span class="spinner-inline"></span></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- ══ MODAL PRODUCTO ══ -->
+<div class="modal-overlay" id="modal-producto">
+  <div class="modal">
+    <h3 id="modal-producto-title">Nuevo Producto</h3>
+    <input type="hidden" id="prod-id" />
+    <div class="form-group"><label>Nombre</label><input type="text" id="prod-nombre" placeholder="Nombre del producto" /></div>
+    <div class="form-group"><label>Categoría</label>
+      <select id="prod-categoria"><option value="">-- seleccionar --</option></select>
+    </div>
+    <div class="form-group"><label>Proveedor</label>
+      <select id="prod-proveedor"><option value="">-- seleccionar --</option></select>
+    </div>
+    <div class="form-group"><label>Precio</label><input type="number" id="prod-precio" step="0.01" placeholder="0.00" /></div>
+    <div class="form-group"><label>Stock</label><input type="number" id="prod-stock" placeholder="0" /></div>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closeModal('modal-producto')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveProducto()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL CATEGORIA ══ -->
+<div class="modal-overlay" id="modal-categoria">
+  <div class="modal">
+    <h3 id="modal-categoria-title">Nueva Categoría</h3>
+    <input type="hidden" id="cat-id" />
+    <div class="form-group"><label>Nombre</label><input type="text" id="cat-nombre" placeholder="Nombre de la categoría" /></div>
+    <div class="form-group"><label>Descripción</label><input type="text" id="cat-desc" placeholder="Descripción" /></div>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closeModal('modal-categoria')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCategoria()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL SUPPLIER ══ -->
+<div class="modal-overlay" id="modal-supplier">
+  <div class="modal">
+    <h3 id="modal-supplier-title">Nuevo Proveedor</h3>
+    <input type="hidden" id="sup-id" />
+    <div class="form-group"><label>Empresa</label><input type="text" id="sup-empresa" placeholder="Nombre de la empresa" /></div>
+    <div class="form-group"><label>Contacto</label><input type="text" id="sup-contacto" placeholder="Nombre del contacto" /></div>
+    <div class="form-group"><label>País</label><input type="text" id="sup-pais" placeholder="País" /></div>
+    <div class="form-group"><label>Teléfono</label><input type="text" id="sup-telefono" placeholder="Teléfono" /></div>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closeModal('modal-supplier')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveSupplier()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+  const API = '/base';
+  let token = localStorage.getItem('access');
+  let currentModule = 'productos';
+  let allData = { productos: [], categorias: [], suppliers: [] };
+
+  // ── AUTH ──
+  function authHeaders() {
+    return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+  }
+
+  function logout() {
+    localStorage.removeItem('access');
+    localStorage.removeItem('refresh');
+    window.location.href = '/';
+  }
+
+  // ── TOAST ──
+  function toast(msg, type = 'success') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = `toast show ${type}`;
+    setTimeout(() => el.classList.remove('show'), 3000);
+  }
+
+  // ── INIT ──
+  async function init() {
+    if (!token) { window.location.href = '/'; return; }
+
+    // Verificar acceso al módulo intentando un GET
+    try {
+
+      const res = await fetch(`${API}/productos/`, { headers: authHeaders() });
+      if (res.status === 401 || res.status === 403) {
+        document.getElementById('access-denied').classList.add('show');
+        return;
+      }
+      document.getElementById('app').style.display = 'flex';
+
+      // Cargar username del token JWT
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        document.getElementById('nav-username').textContent = payload.username || '—';
+      } catch(e) {}
+
+      await Promise.all([loadProductos(), loadCategorias(), loadSuppliers()]); <!--PROBLEMA, en loadCategorias, luego no me termina de cargar la base de datos, pero buneo-->
+    } catch(e) {
+      document.getElementById('access-denied').classList.add('show');
+    }
+  }
+
+  // ── SWITCH MODULE ──
+  function switchModule(mod) {
+    currentModule = mod;
+    ['productos','categorias','suppliers'].forEach(m => {
+      document.getElementById(`mod-${m}`).style.display = m === mod ? 'block' : 'none';
+      document.getElementById(`nav-${m}`).classList.toggle('active', m === mod);
+    });
+  }
+
+  // ── FILTER ──
+  function filterTable(mod) {
+    const q = document.getElementById(`search-${mod}`).value.toLowerCase();
+    const rows = document.querySelectorAll(`#tbody-${mod} tr`);
+    rows.forEach(r => {
+      r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  }
+
+  // ── MODAL ──
+  function openModal(id, data) {
+    document.getElementById(id).classList.add('open');
+    if (id === 'modal-producto') {
+      document.getElementById('modal-producto-title').textContent = data ? 'Editar Producto' : 'Nuevo Producto';
+      document.getElementById('prod-id').value = data?.id || '';
+      document.getElementById('prod-nombre').value = data?.nombre || '';
+      document.getElementById('prod-precio').value = data?.precio || '';
+      document.getElementById('prod-stock').value = data?.stock || '';
+      // Populate selects
+      populateSelect('prod-categoria', allData.categorias, 'id', 'nombre', data?.categoria?.id);
+      populateSelect('prod-proveedor', allData.suppliers, 'id', 'company_name', data?.proveedor?.id);
+    }
+    if (id === 'modal-categoria') {
+      document.getElementById('modal-categoria-title').textContent = data ? 'Editar Categoría' : 'Nueva Categoría';
+      document.getElementById('cat-id').value = data?.id || '';
+      document.getElementById('cat-nombre').value = data?.nombre || '';
+      document.getElementById('cat-desc').value = data?.descripcion || '';
+    }
+    if (id === 'modal-supplier') {
+      document.getElementById('modal-supplier-title').textContent = data ? 'Editar Proveedor' : 'Nuevo Proveedor';
+      document.getElementById('sup-id').value = data?.id || '';
+      document.getElementById('sup-empresa').value = data?.company_name || '';
+      document.getElementById('sup-contacto').value = data?.contact_name || '';
+      document.getElementById('sup-pais').value = data?.country || '';
+      document.getElementById('sup-telefono').value = data?.phone || '';
+    }
+  }
+
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+  function populateSelect(selectId, items, valKey, labelKey, selected) {
+    const sel = document.getElementById(selectId);
+    sel.innerHTML = '<option value="">-- seleccionar --</option>';
+    items.forEach(item => {
+      const opt = document.createElement('option');
+      opt.value = item[valKey];
+      opt.textContent = item[labelKey];
+      if (selected && item[valKey] == selected) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  }
+
+  // ══════════════════════════════
+  // PRODUCTOS
+  // ══════════════════════════════
+  async function loadProductos() {
+    const res = await fetch(`${API}/productos/`, { headers: authHeaders() });
+    const data = await res.json();
+    allData.productos = data;
+    renderProductos(data);
+  }
+
+  function renderProductos(data) {
+    const tbody = document.getElementById('tbody-productos');
+    if (!data.length) {
+      tbody.innerHTML = `<tr><td colspan="7"><div class="state-box"><span class="icon">📭</span>Sin productos</div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = data.map(p => `
+      <tr>
+        <td class="td-id">${p.id}</td>
+        <td><strong>${p.nombre}</strong></td>
+        <td><span class="badge-cat">${p.categoria?.nombre || '—'}</span></td>
+        <td><span class="badge-supplier">${p.proveedor?.company_name || '—'}</span></td>
+        <td class="td-mono">$${parseFloat(p.precio).toFixed(2)}</td>
+        <td class="td-mono">${p.stock}</td>
+        <td>
+          <div class="td-actions">
+            <button class="btn btn-edit" onclick='openModal("modal-producto", ${JSON.stringify(p)})'>✏️ Editar</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteProducto(${p.id})">🗑️</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  async function saveProducto() {
+    const id = document.getElementById('prod-id').value;
+    const body = {
+      nombre: document.getElementById('prod-nombre').value,
+      categoria_id: document.getElementById('prod-categoria').value,
+      proveedor_id: document.getElementById('prod-proveedor').value,
+      precio: document.getElementById('prod-precio').value,
+      stock: document.getElementById('prod-stock').value,
+    };
+    const url = id ? `${API}/productos/${id}/` : `${API}/productos/`;
+    const method = id ? 'PUT' : 'POST';
+    const res = await fetch(url, { method, headers: authHeaders(), body: JSON.stringify(body) });
+    if (res.ok) {
+      toast(id ? '✓ Producto actualizado' : '✓ Producto creado');
+      closeModal('modal-producto');
+      await loadProductos();
+    } else {
+      const err = await res.json();
+      toast('Error: ' + JSON.stringify(err), 'error');
+    }
+  }
+
+  async function deleteProducto(id) {
+    if (!confirm('¿Eliminar este producto?')) return;
+    const res = await fetch(`${API}/productos/${id}/`, { method: 'DELETE', headers: authHeaders() });
+    if (res.ok || res.status === 204) {
+      toast('🗑️ Producto eliminado');
+      await loadProductos();
+    } else {
+      toast('No se pudo eliminar. Tiene datos asociados.', 'error');
+    }
+  }
+
+  // ══════════════════════════════
+  // CATEGORÍAS
+  // ══════════════════════════════
+  async function loadCategorias() {
+    const res = await fetch(`${API}/categorias/`, { headers: authHeaders() });
+    const data = await res.json();
+    allData.categorias = data;
+    renderCategorias(data);
+  }
+
+  function renderCategorias(data) {
+    const tbody = document.getElementById('tbody-categorias');
+    if (!data.length) {
+      tbody.innerHTML = `<tr><td colspan="4"><div class="state-box"><span class="icon">📭</span>Sin categorías</div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = data.map(c => `
+      <tr>
+        <td class="td-id">${c.id}</td>
+        <td><strong>${c.nombre}</strong></td>
+        <td class="td-mono" style="color:var(--text-muted);font-size:0.8rem">${c.descripcion || '—'}</td>
+        <td>
+          <div class="td-actions">
+            <button class="btn btn-edit" onclick='openModal("modal-categoria", ${JSON.stringify(c)})'>✏️ Editar</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteCategoria(${c.id})">🗑️</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  async function saveCategoria() {
+    const id = document.getElementById('cat-id').value;
+    const body = {
+      nombre: document.getElementById('cat-nombre').value,
+      descripcion: document.getElementById('cat-desc').value,
+    };
+    const url = id ? `${API}/categorias/${id}/` : `${API}/categorias/`;
+    const method = id ? 'PUT' : 'POST';
+    const res = await fetch(url, { method, headers: authHeaders(), body: JSON.stringify(body) });
+    if (res.ok) {
+      toast(id ? '✓ Categoría actualizada' : '✓ Categoría creada');
+      closeModal('modal-categoria');
+      await loadCategorias();
+    } else {
+      toast('Error al guardar', 'error');
+    }
+  }
+
+  async function deleteCategoria(id) {
+    if (!confirm('¿Eliminar esta categoría?')) return;
+    const res = await fetch(`${API}/categorias/${id}/`, { method: 'DELETE', headers: authHeaders() });
+    if (res.ok || res.status === 204) {
+      toast('🗑️ Categoría eliminada');
+      await loadCategorias();
+    } else {
+      toast('No se pudo eliminar. Tiene datos asociados.', 'error');
+    }
+  }
+
+  // ══════════════════════════════
+  // SUPPLIERS
+  // ══════════════════════════════
+  async function loadSuppliers() {
+    const res = await fetch(`${API}/suppliers/buscar/`, { headers: authHeaders() });
+    const data = await res.json();
+    allData.suppliers = data;
+    renderSuppliers(data);
+  }
+
+  function renderSuppliers(data) {
+    const tbody = document.getElementById('tbody-suppliers');
+    if (!data.length) {
+      tbody.innerHTML = `<tr><td colspan="6"><div class="state-box"><span class="icon">📭</span>Sin proveedores</div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = data.map(s => `
+      <tr>
+        <td class="td-id">${s.id}</td>
+        <td><strong>${s.company_name}</strong></td>
+        <td class="td-mono">${s.contact_name || '—'}</td>
+        <td class="td-mono">${s.country || '—'}</td>
+        <td class="td-mono">${s.phone || '—'}</td>
+        <td>
+          <div class="td-actions">
+            <button class="btn btn-edit" onclick='openModal("modal-supplier", ${JSON.stringify(s)})'>✏️ Editar</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteSupplier(${s.id})">🗑️</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  async function saveSupplier() {
+    const id = document.getElementById('sup-id').value;
+    const body = {
+      company_name: document.getElementById('sup-empresa').value,
+      contact_name: document.getElementById('sup-contacto').value,
+      country: document.getElementById('sup-pais').value,
+      phone: document.getElementById('sup-telefono').value,
+    };
+    const url = id ? `${API}/suppliers/borrar/${id}/` : `${API}/suppliers/buscar/`;
+    const method = id ? 'PUT' : 'POST';
+    const res = await fetch(url, { method, headers: authHeaders(), body: JSON.stringify(body) });
+    if (res.ok) {
+      toast(id ? '✓ Proveedor actualizado' : '✓ Proveedor creado');
+      closeModal('modal-supplier');
+      await loadSuppliers();
+    } else {
+      toast('Error al guardar', 'error');
+    }
+  }
+
+  async function deleteSupplier(id) {
+    if (!confirm('¿Eliminar este proveedor?')) return;
+    const res = await fetch(`${API}/suppliers/borrar/${id}/`, { method: 'DELETE', headers: authHeaders() });
+    if (res.ok || res.status === 204) {
+      toast('🗑️ Proveedor eliminado');
+      await loadSuppliers();
+    } else {
+      toast('No se pudo eliminar. Tiene datos asociados.', 'error');
+    }
+  }
+
+  // Cerrar modal clickeando fuera
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) overlay.classList.remove('open');
+    });
+  });
+
+  init();
+</script>
+</body>
+</html>

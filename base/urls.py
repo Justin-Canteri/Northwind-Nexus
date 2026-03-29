@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import views, register
+from .views import views
 #inventory
 from .views.inventory import products, categories, suppliers
 #rrhh
@@ -9,9 +9,9 @@ from .views.rrhh.Employees import EmployeeListCreateView, EmployeeDetailView
 from .views.ventas import Customers, Order_Details, Orders, Shippers
 
 urlpatterns = [
-    path('', views.inicio),
-
-    path('api/register/', register.registrar_usuario),
+    path('inventario/',  views.inventario),
+    path('rrhh/', views.rrhh),
+    path('ventas/', views.ventas),
     #---------------------inventory-----------------------------------
     #productos
     path('productos/', products.productsListCreateView.as_view()),
@@ -19,7 +19,7 @@ urlpatterns = [
     
     #categorias
     path('categorias/', categories.CategoriesListCreateView.as_view()),
-    path('categorias/<int:id_producto>/', categories.CategoriesDetailsView.as_view()),
+    path('categorias/<int:id_categoria>/', categories.CategoriesDetailsView.as_view()),
 
     #suppliers
     path('suppliers/buscar/', suppliers.suppliersListCreateView.as_view()),
@@ -28,56 +28,37 @@ urlpatterns = [
 
     #---------------------rrhh-----------------------------------
     #employees
-    path('employees/', EmployeeListCreateView.as_view(), name='empleados-lista-crear'),
-    # urls.py
-    path('employees/<int:id_empleado>/', EmployeeDetailView.as_view()),
-    #path('employees/buscar/', Employees.buscar_empleados),
-    #path('employees/crear/', Employees.crear_empleado),
-    #path('employees/borrar/<int:id_empleado>/', Employees.eliminar_empleado),
-    #path('employees/editar/<int:id_empleado>/', Employees.editar_empleado),
+    path('employees/', Employees.EmployeeListCreateView.as_view(), name='empleados-lista-crear'),
+    path('employees/<int:id_empleado>/', Employees.EmployeeDetailView.as_view()),
+    # --- Regiones ---
+    path('region/', Region.RegionListCreateView.as_view(), name='region-list-create'),
+    path('region/<int:id_region>/', Region.RegionDetailView.as_view(), name='region-detail'),
 
-    #EmployeeTerritories
-    #path('employeeTerritories/buscar/', EmployeeTerritories.buscar_asignaciones),
-    #path('employeeTerritories/crear/', EmployeeTerritories.asignar_territorio),
-    #path('employeeTerritories/borrar/<int:id_empleado>/<str:id_territorio>/', EmployeeTerritories.eliminar_asignacion),
+    # --- Territorios ---
+    path('territories/', Territories.TerritoryListCreateView.as_view(), name='territory-list-create'),
+    path('territories/<str:id_territorio>/', Territories.TerritoryDetailView.as_view(), name='territory-detail'),
 
-    #Region
-    path('region/buscar/', Region.buscar_regiones),
-    path('region/crear/', Region.crear_region),
-    path('region/borrar/<int:id_region>/', Region.eliminar_region),
-    path('region/editar/<int:id_region>/', Region.editar_region),
-
-    #Territorios
-    path('terrirories/buscar/', Territories.buscar_territorios),
-    path('terrirories/crear/', Territories.crear_territorio),
-    path('terrirories/borrar/<int:id_territorio>/', Territories.eliminar_territorio),
-    path('terrirories/editar/<int:id_territorio>/', Territories.editar_territorio),
+    # --- EmployeeTerritories (Relación Empleado-Territorio) ---
+    path('employee-territories/', EmployeeTerritories.EmployeeTerritoriesCreateView.as_view(), name='employee-territories-list'),
+    path('employee-territories/<int:id_EmployeeTerritory>/', EmployeeTerritories.EmployeeTerritoriesDetailView.as_view(), name='employee-territories-detail'),
     #---------------------rrhh-----------------------------------
 
     #---------------------ventas-----------------------------------
     #Customers
-    path('customers/buscar/', Customers.buscar_clientes),
-    path('customers/crear/', Customers.crear_cliente),
-    path('customers/borrar/<int:id_cliente>/', Customers.eliminar_cliente),
-    path('customers/editar/<int:id_cliente>/', Customers.editar_cliente),
+    path('customers/', Customers.CustomerListCreateView.as_view()),
+    path('customers/<int:id_cliente>/', Customers.CustomerDetailView.as_view()),
 
     #Order_details
-    path('order_details/buscar/', Order_Details.buscar_detalles),
-    path('order_details/crear/', Order_Details.crear_detalle),
-    path('order_details/borrar/<int:id_orden>/<int:id_producto>/ ', Order_Details.eliminar_detalle),
-    path('order_details/editar/<int:id_orden>/<int:id_producto>/', Order_Details.editar_detalle),
+    path('order_details/', Order_Details.OrderDetailListCreateView.as_view()),
+    path('order_details/<int:id_orden>/<int:id_producto>/ ', Order_Details.OrderDetailDetailView.as_view()),
 
     #Orders
-    path('orders/buscar/', Orders.buscar),
-    path('orders/crear/', Orders.crear_order),
-    path('orders/borrar/<int:id_order>', Orders.eliminar_order),
-    path('orders/editar/<int:id_order>', Orders.editar_order),
+    path('orders/', Orders.OrderListCreateView.as_view()),
+    path('orders/<int:id_order>', Orders.OrderDetailView.as_view()),
 
     #Shippers
-    path('shippers/buscar/', Shippers.buscar_shippers),
-    path('shippers/crear/', Shippers.crear_shipper),
-    path('shippers/borrar/<int:id_shipper>', Shippers.eliminar_shipper),
-    path('shippers/editar/<int:id_shipper>', Shippers.editar_shipper),
+    path('shippers/', Shippers.ShipperListCreateView.as_view()),
+    path('shippers/<int:id_shipper>', Shippers.ShipperDetailView.as_view()),
     #---------------------ventas-----------------------------------
 
     ]

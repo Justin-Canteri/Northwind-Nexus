@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ventas — Northwind Nexus</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: #2a2a3e;
+    --accent: #f0a500;
+    --accent2: #00e5a0;
+    --accent3: #ff6b6b;
+    --accent4: #7c5cfc;
+    --text: #e8e8f0;
+    --text-muted: #6b6b88;
+    --font-display: 'Syne', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font-display); min-height: 100vh; display: flex; flex-direction: column; }
+  body::before { content: ''; position: fixed; inset: 0; background-image: linear-gradient(rgba(240,165,0,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(240,165,0,0.02) 1px, transparent 1px); background-size: 48px 48px; pointer-events: none; z-index: 0; }
+
+  .nav { position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 1rem 2rem; background: rgba(10,10,15,0.9); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+  .nav-logo { font-weight: 800; font-size: 1.1rem; letter-spacing: -0.02em; cursor: pointer; }
+  .nav-logo span { color: var(--accent); }
+  .nav-right { display: flex; align-items: center; gap: 1rem; }
+  .nav-user { font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-muted); }
+  .nav-user span { color: var(--accent); }
+  .btn-logout { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); background: transparent; border: 1px solid var(--border); padding: 6px 14px; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+  .btn-logout:hover { border-color: var(--accent3); color: var(--accent3); }
+
+  .layout { display: flex; flex: 1; position: relative; z-index: 1; }
+
+  .sidebar { width: 220px; min-height: calc(100vh - 57px); background: var(--surface); border-right: 1px solid var(--border); padding: 1.5rem 0; flex-shrink: 0; }
+  .sidebar-label { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-muted); letter-spacing: 0.12em; text-transform: uppercase; padding: 0 1.2rem; margin-bottom: 0.5rem; display: block; }
+  .sidebar-item { display: flex; align-items: center; gap: 10px; padding: 10px 1.2rem; cursor: pointer; font-size: 0.875rem; font-weight: 600; color: var(--text-muted); transition: all 0.15s; border-left: 2px solid transparent; }
+  .sidebar-item:hover { color: var(--text); background: var(--surface2); }
+  .sidebar-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(240,165,0,0.05); }
+  .sidebar-item .icon { font-size: 1rem; width: 20px; text-align: center; }
+
+  .main { flex: 1; padding: 2rem; overflow-x: auto; }
+
+  .module-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; animation: fadeUp 0.4s ease both; }
+  .module-title h1 { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em; }
+  .module-title p { font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
+
+  .btn { font-family: var(--font-display); font-weight: 700; font-size: 0.82rem; padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; }
+  .btn-primary { background: var(--accent); color: #0a0a0f; }
+  .btn-primary:hover { background: #ffbe2e; transform: translateY(-1px); }
+  .btn-danger { background: rgba(255,107,107,0.1); color: var(--accent3); border: 1px solid rgba(255,107,107,0.2); }
+  .btn-danger:hover { background: rgba(255,107,107,0.2); }
+  .btn-edit { background: rgba(124,92,252,0.1); color: var(--accent4); border: 1px solid rgba(124,92,252,0.2); font-size: 0.75rem; padding: 6px 12px; }
+  .btn-edit:hover { background: rgba(124,92,252,0.2); }
+  .btn-sm { font-size: 0.75rem; padding: 6px 14px; }
+
+  .toolbar { display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; flex-wrap: wrap; animation: fadeUp 0.4s 0.1s ease both; }
+  .search-wrap { position: relative; flex: 1; min-width: 200px; }
+  .search-wrap input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 16px 10px 38px; color: var(--text); font-family: var(--font-mono); font-size: 0.85rem; outline: none; transition: border-color 0.2s; }
+  .search-wrap input:focus { border-color: var(--accent); }
+  .search-wrap::before { content: '⌕'; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 1rem; }
+
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; animation: fadeUp 0.4s 0.15s ease both; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 600px; }
+  thead tr { background: var(--surface2); }
+  th { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; padding: 12px 16px; text-align: left; font-weight: 500; border-bottom: 1px solid var(--border); }
+  td { padding: 13px 16px; font-size: 0.875rem; border-bottom: 1px solid rgba(42,42,62,0.5); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  .td-mono { font-family: var(--font-mono); font-size: 0.82rem; }
+  .td-id { color: var(--text-muted); font-family: var(--font-mono); font-size: 0.78rem; }
+  .td-actions { display: flex; gap: 6px; }
+
+  .badge { display: inline-block; font-family: var(--font-mono); font-size: 0.7rem; padding: 3px 10px; border-radius: 100px; }
+  .badge-gold { background: rgba(240,165,0,0.12); color: var(--accent); border: 1px solid rgba(240,165,0,0.25); }
+  .badge-green { background: rgba(0,229,160,0.08); color: var(--accent2); border: 1px solid rgba(0,229,160,0.15); }
+  .badge-purple { background: rgba(124,92,252,0.1); color: var(--accent4); border: 1px solid rgba(124,92,252,0.2); }
+
+  .state-box { text-align: center; padding: 4rem 2rem; font-family: var(--font-mono); color: var(--text-muted); font-size: 0.85rem; }
+  .state-box .icon { font-size: 2rem; margin-bottom: 1rem; display: block; }
+  .spinner-inline { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .modal-overlay { display: none; position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 1rem; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 2rem; width: 100%; max-width: 500px; animation: fadeUp 0.3s ease both; max-height: 90vh; overflow-y: auto; }
+  .modal h3 { font-size: 1.2rem; font-weight: 800; margin-bottom: 1.5rem; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .form-group { margin-bottom: 1rem; }
+  .form-group label { display: block; font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 6px; }
+  .form-group input, .form-group select { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: var(--text); font-family: var(--font-mono); font-size: 0.85rem; outline: none; transition: border-color 0.2s; }
+  .form-group input:focus, .form-group select:focus { border-color: var(--accent); }
+  .form-group select option { background: var(--surface); }
+  .modal-actions { display: flex; gap: 0.75rem; margin-top: 1.5rem; justify-content: flex-end; }
+  .btn-cancel { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+  .btn-cancel:hover { border-color: var(--text-muted); color: var(--text); }
+
+  .toast { position: fixed; bottom: 2rem; right: 2rem; z-index: 300; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 20px; font-family: var(--font-mono); font-size: 0.82rem; display: none; animation: fadeUp 0.3s ease; max-width: 340px; }
+  .toast.show { display: block; }
+  .toast.success { border-color: rgba(240,165,0,0.4); color: var(--accent); }
+  .toast.error { border-color: rgba(255,107,107,0.3); color: var(--accent3); }
+
+  #access-denied { display: none; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; gap: 1rem; padding: 2rem; }
+  #access-denied.show { display: flex; }
+  #access-denied h2 { font-size: 2rem; font-weight: 800; }
+  #access-denied p { font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted); }
+
+  @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+  @media (max-width: 768px) { .sidebar { display: none; } .main { padding: 1rem; } .form-row { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div id="access-denied">
+  <div style="font-size:3rem">🔒</div>
+  <h2>Acceso denegado</h2>
+  <p>No tenés permisos para acceder al módulo de Ventas.<br>Contactá a un administrador.</p>
+  <button class="btn btn-primary" onclick="window.location.href='/'">← Volver al inicio</button>
+</div>
+
+<div id="app" style="display:none; flex-direction:column; min-height:100vh;">
+
+  <nav class="nav">
+    <div>
+      <span class="nav-logo" onclick="window.location.href='/'">Northwind<span>Nexus</span></span>
+      <small style="font-size:0.7rem; color:var(--text-muted); font-family:var(--font-mono)"> / ventas</small>
+    </div>
+    <div class="nav-right">
+      <span class="nav-user">Usuario: <span id="nav-username">—</span></span>
+      <button class="btn-logout" onclick="logout()">Cerrar sesión</button>
+    </div>
+  </nav>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <span class="sidebar-label">Módulos</span>
+      <div class="sidebar-item active" id="nav-orders" onclick="switchModule('orders')"><span class="icon">🛒</span> Órdenes</div>
+      <div class="sidebar-item" id="nav-customers" onclick="switchModule('customers')"><span class="icon">👥</span> Clientes</div>
+      <div class="sidebar-item" id="nav-orderdetails" onclick="switchModule('orderdetails')"><span class="icon">📋</span> Detalle Órdenes</div>
+      <div class="sidebar-item" id="nav-shippers" onclick="switchModule('shippers')"><span class="icon">🚚</span> Shippers</div>
+    </aside>
+
+    <main class="main">
+
+      <!-- ══ ORDERS ══ -->
+      <section id="mod-orders">
+        <div class="module-header">
+          <div class="module-title"><h1>🛒 Órdenes</h1><p>Historial completo de pedidos</p></div>
+          <button class="btn btn-primary" onclick="openModal('modal-order', null)">+ Nueva orden</button>
+        </div>
+        <div class="toolbar">
+          <div class="search-wrap"><input type="text" id="search-orders" placeholder="Buscar orden..." oninput="filterTable('orders')" /></div>
+        </div>
+        <div class="table-wrap">
+          <table><thead><tr><th>#</th><th>Cliente</th><th>Empleado</th><th>Fecha orden</th><th>Fecha envío</th><th>Flete</th><th>Acciones</th></tr></thead>
+          <tbody id="tbody-orders"><tr><td colspan="7"><div class="state-box"><span class="spinner-inline"></span></div></td></tr></tbody></table>
+        </div>
+      </section>
+
+      <!-- ══ CUSTOMERS ══ -->
+      <section id="mod-customers" style="display:none">
+        <div class="module-header">
+          <div class="module-title"><h1>👥 Clientes</h1><p>Base de clientes registrados</p></div>
+          <button class="btn btn-primary" onclick="openModal('modal-customer', null)">+ Nuevo cliente</button>
+        </div>
+        <div class="toolbar">
+          <div class="search-wrap"><input type="text" id="search-customers" placeholder="Buscar cliente..." oninput="filterTable('customers')" /></div>
+        </div>
+        <div class="table-wrap">
+          <table><thead><tr><th>ID</th><th>Empresa</th><th>Contacto</th><th>País</th><th>Ciudad</th><th>Acciones</th></tr></thead>
+          <tbody id="tbody-customers"><tr><td colspan="6"><div class="state-box"><span class="spinner-inline"></span></div></td></tr></tbody></table>
+        </div>
+      </section>
+
+      <!-- ══ ORDER DETAILS ══ -->
+      <section id="mod-orderdetails" style="display:none">
+        <div class="module-header">
+          <div class="module-title"><h1>📋 Detalle de Órdenes</h1><p>Productos incluidos en cada orden</p></div>
+        </div>
+        <div class="toolbar">
+          <div class="search-wrap"><input type="text" id="search-orderdetails" placeholder="Buscar por orden o producto..." oninput="filterTable('orderdetails')" /></div>
+        </div>
+        <div class="table-wrap">
+          <table><thead><tr><th>Orden</th><th>Producto</th><th>Precio unit.</th><th>Cantidad</th><th>Descuento</th><th>Acciones</th></tr></thead>
+          <tbody id="tbody-orderdetails"><tr><td colspan="6"><div class="state-box"><span class="spinner-inline"></span></div></td></tr></tbody></table>
+        </div>
+      </section>
+
+      <!-- ══ SHIPPERS ══ -->
+      <section id="mod-shippers" style="display:none">
+        <div class="module-header">
+          <div class="module-title"><h1>🚚 Shippers</h1><p>Transportistas disponibles</p></div>
+          <button class="btn btn-primary" onclick="openModal('modal-shipper', null)">+ Nuevo shipper</button>
+        </div>
+        <div class="toolbar">
+          <div class="search-wrap"><input type="text" id="search-shippers" placeholder="Buscar shipper..." oninput="filterTable('shippers')" /></div>
+        </div>
+        <div class="table-wrap">
+          <table><thead><tr><th>#</th><th>Empresa</th><th>Teléfono</th><th>Acciones</th></tr></thead>
+          <tbody id="tbody-shippers"><tr><td colspan="4"><div class="state-box"><span class="spinner-inline"></span></div></td></tr></tbody></table>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- MODAL ORDER -->
+<div class="modal-overlay" id="modal-order">
+  <div class="modal">
+    <h3 id="modal-order-title">Nueva Orden</h3>
+    <input type="hidden" id="ord-id" />
+    <div class="form-group"><label>Cliente</label>
+      <select id="ord-customer"><option value="">— seleccionar —</option></select>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Fecha orden</label><input type="date" id="ord-date" /></div>
+      <div class="form-group"><label>Fecha requerida</label><input type="date" id="ord-required" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Fecha envío</label><input type="date" id="ord-shipped" /></div>
+      <div class="form-group"><label>Flete</label><input type="number" id="ord-freight" step="0.01" placeholder="0.00" /></div>
+    </div>
+    <div class="form-group"><label>Dirección envío</label><input type="text" id="ord-shipaddr" placeholder="Dirección" /></div>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closeModal('modal-order')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveOrder()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CUSTOMER -->
+<div class="modal-overlay" id="modal-customer">
+  <div class="modal">
+    <h3 id="modal-customer-title">Nuevo Cliente</h3>
+    <input type="hidden" id="cust-id" />
+    <div class="form-row">
+      <div class="form-group"><label>ID (5 letras)</label><input type="text" id="cust-code" maxlength="5" placeholder="ALFKI" /></div>
+      <div class="form-group"><label>Empresa</label><input type="text" id="cust-company" placeholder="Nombre empresa" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Contacto</label><input type="text" id="cust-contact" placeholder="Nombre contacto" /></div>
+      <div class="form-group"><label>País</label><input type="text" id="cust-country" placeholder="País" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Ciudad</label><input type="text" id="cust-city" placeholder="Ciudad" /></div>
+      <div class="form-group"><label>Teléfono</label><input type="text" id="cust-phone" placeholder="Teléfono" /></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closeModal('modal-customer')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCustomer()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL SHIPPER -->
+<div class="modal-overlay" id="modal-shipper">
+  <div class="modal">
+    <h3 id="modal-shipper-title">Nuevo Shipper</h3>
+    <input type="hidden" id="ship-id" />
+    <div class="form-group"><label>Empresa</label><input type="text" id="ship-company" placeholder="Nombre empresa" /></div>
+    <div class="form-group"><label>Teléfono</label><input type="text" id="ship-phone" placeholder="Teléfono" /></div>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closeModal('modal-shipper')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveShipper()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const API = '/base';
+  let token = localStorage.getItem('access');
+  let allData = { orders: [], customers: [], orderdetails: [], shippers: [] };
+
+  function authHeaders() { return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }; }
+  function logout() { localStorage.removeItem('access'); localStorage.removeItem('refresh'); window.location.href = '/'; }
+
+  function toast(msg, type = 'success') {
+    const el = document.getElementById('toast');
+    el.textContent = msg; el.className = `toast show ${type}`;
+    setTimeout(() => el.classList.remove('show'), 3000);
+  }
+
+  function switchModule(mod) {
+    ['orders','customers','orderdetails','shippers'].forEach(m => {
+      document.getElementById(`mod-${m}`).style.display = m === mod ? 'block' : 'none';
+      document.getElementById(`nav-${m}`).classList.toggle('active', m === mod);
+    });
+  }
+
+  function filterTable(mod) {
+    const q = document.getElementById(`search-${mod}`).value.toLowerCase();
+    document.querySelectorAll(`#tbody-${mod} tr`).forEach(r => {
+      r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  }
+
+  function openModal(id, data) {
+    document.getElementById(id).classList.add('open');
+    if (id === 'modal-order') {
+      document.getElementById('modal-order-title').textContent = data ? 'Editar Orden' : 'Nueva Orden';
+      document.getElementById('ord-id').value = data?.id || '';
+      document.getElementById('ord-date').value = data?.order_date || '';
+      document.getElementById('ord-required').value = data?.required_date || '';
+      document.getElementById('ord-shipped').value = data?.shipped_date || '';
+      document.getElementById('ord-freight').value = data?.freight || '';
+      document.getElementById('ord-shipaddr').value = data?.ship_address || '';
+      populateSelect('ord-customer', allData.customers, 'id', r => `${r.id} — ${r.company_name || r.id}`, data?.customer?.id);
+    }
+    if (id === 'modal-customer') {
+      document.getElementById('modal-customer-title').textContent = data ? 'Editar Cliente' : 'Nuevo Cliente';
+      document.getElementById('cust-id').value = data?.id || '';
+      document.getElementById('cust-code').value = data?.id || '';
+      document.getElementById('cust-company').value = data?.company_name || '';
+      document.getElementById('cust-contact').value = data?.contact_name || '';
+      document.getElementById('cust-country').value = data?.country || '';
+      document.getElementById('cust-city').value = data?.city || '';
+      document.getElementById('cust-phone').value = data?.phone || '';
+    }
+    if (id === 'modal-shipper') {
+      document.getElementById('modal-shipper-title').textContent = data ? 'Editar Shipper' : 'Nuevo Shipper';
+      document.getElementById('ship-id').value = data?.id || '';
+      document.getElementById('ship-company').value = data?.company_name || '';
+      document.getElementById('ship-phone').value = data?.phone || '';
+    }
+  }
+
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+  function populateSelect(selectId, items, valKey, labelFn, selected) {
+    const sel = document.getElementById(selectId);
+    sel.innerHTML = '<option value="">— seleccionar —</option>';
+    items.forEach(item => {
+      const opt = document.createElement('option');
+      opt.value = item[valKey];
+      opt.textContent = typeof labelFn === 'function' ? labelFn(item) : item[labelFn];
+      if (selected && item[valKey] == selected) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  }
+
+  // ══ ORDERS ══
+  async function loadOrders() {
+    const res = await fetch(`${API}/orders/`, { headers: authHeaders() });
+    const data = await res.json();
+    allData.orders = data;
+    const tbody = document.getElementById('tbody-orders');
+    if (!data.length) { tbody.innerHTML = `<tr><td colspan="7"><div class="state-box"><span class="icon">📭</span>Sin órdenes</div></td></tr>`; return; }
+    tbody.innerHTML = data.map(o => `<tr>
+      <td class="td-id">${o.id}</td>
+      <td><span class="badge badge-gold">${o.customer?.id || o.customer || '—'}</span></td>
+      <td class="td-mono">${o.employee ? `${o.employee.first_name || ''} ${o.employee.last_name || ''}`.trim() : '—'}</td>
+      <td class="td-mono">${o.order_date || '—'}</td>
+      <td class="td-mono">${o.shipped_date || '—'}</td>
+      <td class="td-mono">$${parseFloat(o.freight || 0).toFixed(2)}</td>
+      <td><div class="td-actions">
+        <button class="btn btn-edit" onclick='openModal("modal-order", ${JSON.stringify(o)})'>✏️ Editar</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteOrder(${o.id})">🗑️</button>
+      </div></td>
+    </tr>`).join('');
+  }
+
+  async function saveOrder() {
+    const id = document.getElementById('ord-id').value;
+    const body = {
+      customer: document.getElementById('ord-customer').value,
+      order_date: document.getElementById('ord-date').value || null,
+      required_date: document.getElementById('ord-required').value || null,
+      shipped_date: document.getElementById('ord-shipped').value || null,
+      freight: document.getElementById('ord-freight').value || null,
+      ship_address: document.getElementById('ord-shipaddr').value,
+    };
+    const url = id ? `${API}/orders/${id}` : `${API}/orders/`;
+    const res = await fetch(url, { method: id ? 'PUT' : 'POST', headers: authHeaders(), body: JSON.stringify(body) });
+    if (res.ok) { toast(id ? '✓ Orden actualizada' : '✓ Orden creada'); closeModal('modal-order'); await loadOrders(); }
+    else { const e = await res.json(); toast('Error: ' + JSON.stringify(e), 'error'); }
+  }
+
+  async function deleteOrder(id) {
+    if (!confirm('¿Eliminar esta orden?')) return;
+    const res = await fetch(`${API}/orders/${id}`, { method: 'DELETE', headers: authHeaders() });
+    if (res.ok || res.status === 204) { toast('🗑️ Orden eliminada'); await loadOrders(); }
+    else toast('No se pudo eliminar. Tiene datos asociados.', 'error');
+  }
+
+  // ══ CUSTOMERS ══
+  async function loadCustomers() {
+    const res = await fetch(`${API}/customers/`, { headers: authHeaders() });
+    const data = await res.json();
+    allData.customers = data;
+    const tbody = document.getElementById('tbody-customers');
+    if (!data.length) { tbody.innerHTML = `<tr><td colspan="6"><div class="state-box"><span class="icon">📭</span>Sin clientes</div></td></tr>`; return; }
+    tbody.innerHTML = data.map(c => `<tr>
+      <td class="td-id">${c.id}</td>
+      <td><strong>${c.company_name || '—'}</strong></td>
+      <td class="td-mono">${c.contact_name || '—'}</td>
+      <td class="td-mono">${c.country || '—'}</td>
+      <td class="td-mono">${c.city || '—'}</td>
+      <td><div class="td-actions">
+        <button class="btn btn-edit" onclick='openModal("modal-customer", ${JSON.stringify(c)})'>✏️ Editar</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteCustomer('${c.id}')">🗑️</button>
+      </div></td>
+    </tr>`).join('');
+  }
+
+  async function saveCustomer() {
+    const id = document.getElementById('cust-id').value;
+    const body = {
+      id: document.getElementById('cust-code').value,
+      company_name: document.getElementById('cust-company').value,
+      contact_name: document.getElementById('cust-contact').value,
+      country: document.getElementById('cust-country').value,
+      city: document.getElementById('cust-city').value,
+      phone: document.getElementById('cust-phone').value,
+    };
+    const url = id ? `${API}/customers/${id}/` : `${API}/customers/`;
+    const res = await fetch(url, { method: id ? 'PUT' : 'POST', headers: authHeaders(), body: JSON.stringify(body) });
+    if (res.ok) { toast(id ? '✓ Cliente actualizado' : '✓ Cliente creado'); closeModal('modal-customer'); await loadCustomers(); }
+    else toast('Error al guardar', 'error');
+  }
+
+  async function deleteCustomer(id) {
+    if (!confirm('¿Eliminar este cliente?')) return;
+    const res = await fetch(`${API}/customers/${id}/`, { method: 'DELETE', headers: authHeaders() });
+    if (res.ok || res.status === 204) { toast('🗑️ Cliente eliminado'); await loadCustomers(); }
+    else toast('No se pudo eliminar. Tiene órdenes asociadas.', 'error');
+  }
+
+  // ══ ORDER DETAILS ══
+  async function loadOrderDetails() {
+    const res = await fetch(`${API}/order_details/`, { headers: authHeaders() });
+    const data = await res.json();
+    allData.orderdetails = data;
+    const tbody = document.getElementById('tbody-orderdetails');
+    if (!data.length) { tbody.innerHTML = `<tr><td colspan="6"><div class="state-box"><span class="icon">📭</span>Sin detalles</div></td></tr>`; return; }
+    tbody.innerHTML = data.map(d => `<tr>
+      <td><span class="badge badge-gold">#${d.order?.id || d.order || '—'}</span></td>
+      <td><strong>${d.product?.nombre || d.product?.product_name || '—'}</strong></td>
+      <td class="td-mono">$${parseFloat(d.unit_price || 0).toFixed(2)}</td>
+      <td class="td-mono">${d.quantity || '—'}</td>
+      <td class="td-mono">${d.discount ? (d.discount * 100).toFixed(0) + '%' : '0%'}</td>
+      <td><div class="td-actions">
+        <button class="btn btn-danger btn-sm" onclick="deleteOrderDetail(${d.order?.id || d.order}, ${d.product?.id || d.product})">🗑️</button>
+      </div></td>
+    </tr>`).join('');
+  }
+
+  async function deleteOrderDetail(ordId, prodId) {
+    if (!confirm('¿Eliminar este detalle?')) return;
+    const res = await fetch(`${API}/order_details/${ordId}/${prodId}/ `, { method: 'DELETE', headers: authHeaders() });
+    if (res.ok || res.status === 204) { toast('🗑️ Detalle eliminado'); await loadOrderDetails(); }
+    else toast('No se pudo eliminar.', 'error');
+  }
+
+  // ══ SHIPPERS ══
+  async function loadShippers() {
+    const res = await fetch(`${API}/shippers/`, { headers: authHeaders() });
+    const data = await res.json();
+    allData.shippers = data;
+    const tbody = document.getElementById('tbody-shippers');
+    if (!data.length) { tbody.innerHTML = `<tr><td colspan="4"><div class="state-box"><span class="icon">📭</span>Sin shippers</div></td></tr>`; return; }
+    tbody.innerHTML = data.map(s => `<tr>
+      <td class="td-id">${s.id}</td>
+      <td><strong>${s.company_name || '—'}</strong></td>
+      <td class="td-mono">${s.phone || '—'}</td>
+      <td><div class="td-actions">
+        <button class="btn btn-edit" onclick='openModal("modal-shipper", ${JSON.stringify(s)})'>✏️ Editar</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteShipper(${s.id})">🗑️</button>
+      </div></td>
+    </tr>`).join('');
+  }
+
+  async function saveShipper() {
+    const id = document.getElementById('ship-id').value;
+    const body = { company_name: document.getElementById('ship-company').value, phone: document.getElementById('ship-phone').value };
+    const url = id ? `${API}/shippers/${id}` : `${API}/shippers/`;
+    const res = await fetch(url, { method: id ? 'PUT' : 'POST', headers: authHeaders(), body: JSON.stringify(body) });
+    if (res.ok) { toast(id ? '✓ Shipper actualizado' : '✓ Shipper creado'); closeModal('modal-shipper'); await loadShippers(); }
+    else toast('Error al guardar', 'error');
+  }
+
+  async function deleteShipper(id) {
+    if (!confirm('¿Eliminar este shipper?')) return;
+    const res = await fetch(`${API}/shippers/${id}`, { method: 'DELETE', headers: authHeaders() });
+    if (res.ok || res.status === 204) { toast('🗑️ Shipper eliminado'); await loadShippers(); }
+    else toast('No se pudo eliminar. Tiene órdenes asociadas.', 'error');
+  }
+
+  // ══ INIT ══
+  async function init() {
+    if (!token) { window.location.href = '/'; return; }
+    try {
+      const res = await fetch(`${API}/orders/`, { headers: authHeaders() });
+      if (res.status === 401 || res.status === 403) { document.getElementById('access-denied').classList.add('show'); return; }
+      document.getElementById('app').style.display = 'flex';
+      try { const p = JSON.parse(atob(token.split('.')[1])); document.getElementById('nav-username').textContent = p.username || '—'; } catch(e) {}
+      await Promise.all([loadOrders(), loadCustomers(), loadOrderDetails(), loadShippers()]);
+    } catch(e) { document.getElementById('access-denied').classList.add('show'); }
+  }
+
+  document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); }));
+  init();
+</script>
+</body>
+</html>

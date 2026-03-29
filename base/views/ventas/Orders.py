@@ -6,88 +6,69 @@ from ...models.ventas import Order  # Tu "mapa"
 from django.views.decorators.csrf import csrf_exempt
 
 
-def buscar(request):
-    order_buscado = request.GET.get('nombre')
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from ..permissions import IsVentas
+from ...models.ventas import Order
+from ...serializers import OrderSerializer
 
-    if order_buscado:
-        resultado = Order.objects.filter(order_buscado = id)
-    else:
-        resultado = Order.objects.all()
+class OrderListCreateView(APIView):
+    """
+    Lista órdenes (con filtro por ID de orden o cliente) y crea nuevas.
+    """
+    permission_classes = [IsAuthenticated, IsVentas]
 
-    respuesta_texto = "<h1>Resultados de Northwind:</h1><ul>"
+    def get(self, request):
+        
+        # Optimizamos la consulta para traer datos del cliente y el empleado de una vez
+        queryset = Order.objects.select_related('customer', 'employee', 'ship_via').all()
+        
+        serializer = OrderSerializer(queryset, many=True)
+        return Response(serializer.data)
 
-    for p in resultado:
-        respuesta_texto += f"Order: = {p.id} -{p.customer}"
+    def post(self, request):
+        # 2. Creación usando el Serializer
+        serializer = OrderSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    respuesta_texto += "</ul>"
 
-    return HttpResponse (respuesta_texto)
+class OrderDetailView(APIView):
+    """
+    Detalle, edición y borrado de una orden específica.
+    """
+    permission_classes = [IsAuthenticated, IsVentas]
 
-
-@csrf_exempt
-def crear_order(request):
-    if request.method == 'POST':
+    def get_object(self, id_order):
         try:
-            datos = json.loads(request.body)
-
-            # Creamos la orden con los datos que vienen de Postman
-            nueva_order = Order.objects.create(
-                customer_id=datos.get('customer_id'), # ID del cliente (ej: 'ALFKI')
-                employee_id=datos.get('employee_id'),
-                order_date=datos.get('order_date'),
-                required_date=datos.get('required_date'),
-                ship_via_id=datos.get('ship_via_id'), # ID del Shipper
-                freight=datos.get('freight', 0),
-                ship_name=datos.get('ship_name'),
-                ship_address=datos.get('ship_address'),
-                ship_city=datos.get('ship_city'),
-                ship_country=datos.get('ship_country')
-            )
-
-            return JsonResponse({
-                "mensaje": "Orden creada con éxito",
-                "order_id": nueva_order.id
-            }, status=201)
-
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=400)
-
-    return JsonResponse({"error": "Solo se permite POST"}, status=405)
-
-
-@csrf_exempt
-def editar_order(request, id_order):
-    if request.method == 'PUT':
-        try:
-            o = Order.objects.get(id=id_order)
-            datos = json.loads(request.body)
-
-            # Actualizamos campos (si no vienen en el JSON, dejamos el que estaba)
-            o.ship_name = datos.get('ship_name', o.ship_name)
-            o.ship_address = datos.get('ship_address', o.ship_address)
-            o.freight = datos.get('freight', o.freight)
-            o.shipped_date = datos.get('shipped_date', o.shipped_date)
-
-            o.save()
-
-            return JsonResponse({
-                "mensaje": f"Orden {id_order} actualizada",
-                "datos": {"ship_name": o.ship_name, "flete": float(o.freight)}
-            })
-
+            orden_obtenida = Order.objects.select_related('customer', 'employee').get(id=id_order)
+            serializer = OrderSerializer(orden_obtenida)
+            return Response(serializer.data)
         except Order.DoesNotExist:
-            return JsonResponse({"error": "La orden no existe"}, status=404)
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=400)
+            return Response({"error": "No existe"}, status=404)
 
+    def put(self, request, id_order):
 
-@csrf_exempt
-def eliminar_order(request, id_order):
-    if request.method == 'DELETE':
         try:
-            # Primero buscamos para confirmar existencia
-            orden = Order.objects.get(id=id_order)
-            orden.delete()
-            return JsonResponse({"mensaje": f"Orden {id_order} eliminada correctamente"})
+            orden_obtenida = Order.objects.get(id=id_order)
+
+            serializer = OrderSerializer(orden_obtenida, data = request.data)
+
+            if serializer.is_valid():
+                return Response(serializer.data)
+            return Response(serializer.errors, status=400)
         except Order.DoesNotExist:
-            return JsonResponse({"error": "La orden no existe"}, status=404)
+            return Response({"error": "Noxiste"}, status=404)
+           
+    def delete(self, request, id_order):
+        try:
+            productoAeliminar = Order.objects.get(id = id_order)
+            productoAeliminar.delete()
+            return Response({"mensaje": f"orden {id_order} eliminada"}, status=204)
+        except Exception:
+            return Response({"error": "No se puede eliminar: tiene datos asociados"}, status=400)

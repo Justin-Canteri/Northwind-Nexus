@@ -41,6 +41,16 @@ class EmployeeDetailView(APIView):
     # El mismo escudo de seguridad
     permission_classes = [IsAuthenticated, IsRRHH]
 
+    def get(self, request, id_empleado):
+        try:
+            empleado = Employee.objects.get(id = id_empleado)
+
+            serializer = EmployeeSerializer(empleado)
+            return Response (serializer.data)
+        except Employee.DoesNotExist:
+            return Response({"error": "No existe"}, status=404)
+        
+
     def put(self, request, id_empleado):
         try:
             empleado = Employee.objects.get(id=id_empleado)

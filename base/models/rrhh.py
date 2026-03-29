@@ -65,7 +65,7 @@ class Employee(models.Model):
 
 class EmployeeTerritory(models.Model):
     # Esta es una tabla intermedia para la relación Many-to-Many entre Empleados y Territorios
-    employee = models.ForeignKey(Employee, models.DO_NOTHING, db_column='employee_id')
+    employee = models.ForeignKey(Employee, models.DO_NOTHING, db_column='employee_id', primary_key=True)
     territory = models.ForeignKey('Territory',
                                   db_column='territory_id',
                                   null= True, 

@@ -6,106 +6,73 @@ from ...models.ventas import Customer  # Tu "mapa"
 from django.views.decorators.csrf import csrf_exempt
 
 
-def buscar_clientes(request):
-    # 1. Obtenemos el parámetro de búsqueda por nombre de empresa
-    nombre_buscado = request.GET.get('nombre')
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from ..permissions import IsVentas  # Importamos tu clase de permiso
+from ...models.ventas import Customer
+from ...serializers import CustomerSerializer
 
-    # 2. Hacemos el filtro en la DB
-    if nombre_buscado:
-        # SELECT * FROM customers WHERE company_name ILIKE '%valor%'
-        resultados = Customer.objects.filter(company_name__icontains=nombre_buscado)
-    else:
-        # Si no hay búsqueda, traemos los primeros 10 para no saturar
-        resultados = Customer.objects.all()[:10]
+class CustomerListCreateView(APIView):
+    """
+    Lista clientes (con filtro por nombre de empresa) y permite crear nuevos.
+    """
+    permission_classes = [IsAuthenticated, IsVentas]
+
+    def get(self, request):        
+        resultados = Customer.objects.all()
         
-    # 3. Construimos la respuesta en HTML (siguiendo tu formato de estudio)
-    respuesta_texto = "<h1>Resultados de Clientes Northwind:</h1><ul>"
-    
-    for c in resultados:
-        respuesta_texto += f"<li>ID: {c.id} - Empresa: {c.company_name} - Contacto: {c.contact_name}</li>"
-    
-    respuesta_texto += "</ul>"
+        # 2. Serialización
+        serializer = CustomerSerializer(resultados, many=True)
+        return Response(serializer.data)
 
-    return HttpResponse(respuesta_texto)
+    def post(self, request):
+        # 3. Creación: El ID debe ser enviado (5 caracteres)
+        serializer = CustomerSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-@csrf_exempt
-def crear_cliente(request):
-    if request.method == 'POST':
+
+class CustomerDetailView(APIView):
+    """
+    Obtener, actualizar o eliminar un cliente específico por su ID de 5 letras.
+    """
+    permission_classes = [IsAuthenticated, IsVentas]
+
+    def get(self, id_cliente):
         try:
-            # 1. Traducimos el JSON a diccionario
-            datos = json.loads(request.body)
+            customer_Obtenido = Customer.objects.get(id=id_cliente)
+            serializer = CustomerSerializer(customer_Obtenido)
 
-            # 2. Creamos el cliente
-            # IMPORTANTE: En Northwind el ID de cliente NO es autoincremental, son 5 letras.
-            nuevo_cliente = Customer.objects.create(
-                id=datos.get('id'), # Ej: 'ABCDE'
-                company_name=datos.get('company_name'),
-                contact_name=datos.get('contact_name'),
-                contact_title=datos.get('contact_title'),
-                address=datos.get('address'),
-                city=datos.get('city'),
-                country=datos.get('country'),
-                phone=datos.get('phone')
-            )
-
-            return JsonResponse({
-                "mensaje": "Cliente creado con éxito",
-                "id_asignado": nuevo_cliente.id,
-                "empresa": nuevo_cliente.company_name
-            }, status=201)
-
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=400)
-
-    return JsonResponse({"error": "Solo se permite POST"}, status=405)
-
-@csrf_exempt
-def editar_cliente(request, id_cliente):
-    if request.method == 'PUT':
-        try:
-            # 1. Buscamos el cliente por su ID (las 5 letras)
-            c = Customer.objects.get(id=id_cliente)
-
-            # 2. Leemos los datos nuevos
-            datos = json.loads(request.body)
-
-            # 3. Actualizamos los campos (si no vienen, dejamos el anterior)
-            c.company_name = datos.get('company_name', c.company_name)
-            c.contact_name = datos.get('contact_name', c.contact_name)
-            c.address = datos.get('address', c.address)
-            c.city = datos.get('city', c.city)
-            c.phone = datos.get('phone', c.phone)
-
-            # 4. Guardamos cambios
-            c.save()
-
-            return JsonResponse({
-                "mensaje": f"Cliente {id_cliente} actualizado correctamente",
-                "datos_actualizados": {
-                    "empresa": c.company_name,
-                    "ciudad": c.city
-                }
-            })
-
+            return Response(serializer.data)
+        
         except Customer.DoesNotExist:
-            return JsonResponse({"error": "El cliente no existe"}, status=404)
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=400)
+            return Response({"error": "No existe"}, status=404)
 
-    return JsonResponse({"error": "Solo se permite PUT"}, status=405)
+    def put(self, request, id_cliente):
 
-@csrf_exempt
-def eliminar_cliente(request, id_cliente):
-    if request.method == 'DELETE':
         try:
-            # Verificamos si existe antes de borrar
-            cliente = Customer.objects.get(id=id_cliente)
-            cliente.delete()
-            return JsonResponse({"mensaje": f"Cliente {id_cliente} eliminado con éxito"})
-        except Customer.DoesNotExist:
-            return JsonResponse({"error": "El cliente no existe"}, status=404)
-        except Exception as e:
-            # Northwind no te dejará borrar un cliente que ya tenga Órdenes (llave foránea)
-            return JsonResponse({"error": "No se puede eliminar: el cliente tiene pedidos asociados"}, status=400)
+            Producto_Obtenido = Customer.objects.get(id = id_cliente)
 
-    return JsonResponse({"error": "Solo se permite DELETE"}, status=405)
+            serializer  = CustomerSerializer(Producto_Obtenido, data = request.data)
+
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response (serializer.errors,status=400)
+        except Customer.DoesNotExist:
+            return Response({"error": "No existe"}, status=404)
+
+        
+
+    def delete(self, request, id_cliente):
+        try:
+            ClienteAeliminar = Customer.objects.get(id = id_cliente)
+            ClienteAeliminar.delete()
+            return Response({"mensaje": f"cliente {id_cliente} eliminado"}, status=204)
+        except Exception:
+            return Response({"error": "No se puede eliminar: tiene datos asociados"}, status=400)

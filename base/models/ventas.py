@@ -34,13 +34,24 @@ class Shipper(models.Model):
 
 class Order(models.Model):
     id = models.AutoField(db_column='order_id', primary_key=True)
-    customer = models.ForeignKey(Customer, models.DO_NOTHING, db_column='customer_id', blank=True, null=True)
-    # Recomendación: Si tienes el modelo Employee, cámbialo a ForeignKey('base.Employee', ...)
-    employee_id = models.IntegerField(db_column='employee_id', blank=True, null=True) 
+    # Relación con Cliente
+    customer = models.ForeignKey(Customer, 
+                                 models.DO_NOTHING, 
+                                 db_column='customer_id', 
+                                 blank=True, 
+                                 null=True, 
+                                 related_name='orders')
+    # Relación con Empleado (RRHH)
+    employee = models.ForeignKey('Employee', 
+                                 models.DO_NOTHING, 
+                                 db_column='employee_id', 
+                                 blank=True, null=True, 
+                                 related_name='orders_sold') 
     order_date = models.DateField(db_column='order_date', blank=True, null=True)
     required_date = models.DateField(db_column='required_date', blank=True, null=True)
     shipped_date = models.DateField(db_column='shipped_date', blank=True, null=True)
-    ship_via = models.ForeignKey(Shipper, models.DO_NOTHING, db_column='ship_via', blank=True, null=True)
+    # Relación con Transportista
+    ship_via = models.ForeignKey(Shipper, models.DO_NOTHING, db_column='ship_via', blank=True, null=True, related_name='shipments')
     freight = models.DecimalField(db_column='freight', max_digits=10, decimal_places=2, blank=True, null=True)
     ship_name = models.CharField(db_column='ship_name', max_length=40, blank=True, null=True)
     ship_address = models.CharField(db_column='ship_address', max_length=60, blank=True, null=True)
@@ -54,12 +65,13 @@ class Order(models.Model):
         db_table = 'orders'
 
     def __str__(self):
-        return f"Orden {self.id}"
+        return f"Orden {self.id} - {self.customer}"
 
 class OrderDetail(models.Model):
-    # SOLUCIÓN AL WARNING: Eliminamos primary_key=True del ForeignKey
-    order = models.ForeignKey(Order, models.DO_NOTHING, db_column='order_id')
-    product = models.ForeignKey('base.Producto', models.DO_NOTHING, db_column='product_id')
+    # En Northwind, order_details no tiene ID propio, se usa order_id + product_id
+    # Para Django, definimos uno como primary_key=True aunque sea compuesta en DB
+    order = models.ForeignKey(Order, models.DO_NOTHING, db_column='order_id', primary_key=True, related_name='details')
+    product = models.ForeignKey('base.Producto', models.DO_NOTHING, db_column='product_id', related_name='order_entries')
     unit_price = models.DecimalField(db_column='unit_price', max_digits=10, decimal_places=2)
     quantity = models.SmallIntegerField(db_column='quantity')
     discount = models.FloatField(db_column='discount')
@@ -67,13 +79,7 @@ class OrderDetail(models.Model):
     class Meta:
         managed = False
         db_table = 'order_details'
-        # IMPORTANTE: Como Northwind usa llave compuesta, Django necesita un truco.
-        # Al no tener un ID único, le decimos que la combinación de ambos es única.
         unique_together = (('order', 'product'),)
 
-    # TRUCO FINAL: Para que Django no llore por la falta de una Primary Key real en un modelo 'managed=False'
-    # a veces es necesario definir un ID ficticio si vas a usar el Admin de Django.
-    # Pero para tu API, con unique_together debería bastar.
-
     def __str__(self):
-        return f"Detalle {self.order_id} - {self.product_id}"
+        return f"Detalle Orden {self.order_id} - Producto {self.product_id}"

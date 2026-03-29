@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Northwind Nexus</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: #2a2a3e;
+    --accent: #00e5a0;
+    --accent2: #7c5cfc;
+    --accent3: #ff6b6b;
+    --text: #e8e8f0;
+    --text-muted: #6b6b88;
+    --font-display: 'Syne', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-display);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,160,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,160,0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .page { display: none; min-height: 100vh; position: relative; z-index: 1; }
+  .page.active { display: flex; }
+
+  /* ══ LANDING ══ */
+  #page-home {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    padding-top: 6rem;
+  }
+
+  .orb { position: fixed; border-radius: 50%; filter: blur(120px); opacity: 0.15; pointer-events: none; }
+  .orb-1 { width: 600px; height: 600px; background: var(--accent2); top: -200px; right: -200px; }
+  .orb-2 { width: 400px; height: 400px; background: var(--accent); bottom: -150px; left: -100px; }
+
+  .hero { text-align: center; max-width: 780px; animation: fadeUp 0.8s ease both; }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(0,229,160,0.08); border: 1px solid rgba(0,229,160,0.2);
+    color: var(--accent); font-family: var(--font-mono); font-size: 0.72rem;
+    padding: 6px 14px; border-radius: 100px; margin-bottom: 2rem; letter-spacing: 0.08em;
+  }
+  .badge::before { content: '●'; font-size: 0.5rem; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .hero h1 { font-size: clamp(3rem, 8vw, 6rem); font-weight: 800; line-height: 1; letter-spacing: -0.03em; margin-bottom: 1.5rem; }
+  .hero h1 span.green { color: var(--accent); }
+  .hero h1 span.purple { color: var(--accent2); }
+
+  .hero p { font-family: var(--font-mono); font-size: 1rem; color: var(--text-muted); line-height: 1.7; max-width: 540px; margin: 0 auto 2.5rem; }
+
+  .hero-btns { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+
+  .btn {
+    font-family: var(--font-display); font-weight: 700; font-size: 0.9rem;
+    padding: 14px 32px; border-radius: 8px; border: none; cursor: pointer;
+    transition: all 0.2s; letter-spacing: 0.02em; text-decoration: none;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn-primary { background: var(--accent); color: #0a0a0f; }
+  .btn-primary:hover { background: #00ffb3; transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,229,160,0.3); }
+  .btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--accent2); color: var(--accent2); transform: translateY(-2px); }
+
+  .stats { display: flex; gap: 3rem; margin-top: 4rem; animation: fadeUp 0.8s 0.2s ease both; }
+  .stat { text-align: center; }
+  .stat-num { font-size: 2rem; font-weight: 800; color: var(--accent); }
+  .stat-label { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.06em; text-transform: uppercase; margin-top: 2px; }
+
+  .features {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+    background: var(--border); max-width: 900px; width: 100%; margin-top: 5rem;
+    border: 1px solid var(--border); border-radius: 16px; overflow: hidden;
+    animation: fadeUp 0.8s 0.4s ease both;
+  }
+  .feature { background: var(--surface); padding: 2rem; transition: background 0.2s; cursor: pointer; }
+  .feature:hover { background: var(--surface2); }
+  .feature-icon { font-size: 1.5rem; margin-bottom: 1rem; }
+  .feature h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.5rem; }
+  .feature p { font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-muted); line-height: 1.6; }
+
+  /* ══ AUTH ══ */
+  #page-login, #page-register {
+    align-items: center; justify-content: center; padding: 2rem; flex-direction: column; gap: 2rem;
+  }
+
+  .auth-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+    padding: 2.5rem; width: 100%; max-width: 440px; animation: fadeUp 0.5s ease both;
+  }
+  .auth-back { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted); cursor: pointer; transition: color 0.2s; margin-bottom: 2rem; }
+  .auth-back:hover { color: var(--accent); }
+  .auth-header { margin-bottom: 2rem; }
+  .auth-header .logo-small { font-size: 0.75rem; font-family: var(--font-mono); color: var(--accent); letter-spacing: 0.1em; margin-bottom: 1rem; display: block; }
+  .auth-header h2 { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 0.4rem; }
+  .auth-header p { font-family: var(--font-mono); font-size: 0.82rem; color: var(--text-muted); }
+
+  .form-group { margin-bottom: 1.2rem; }
+  label { display: block; font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 8px; }
+  input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; color: var(--text); font-family: var(--font-mono); font-size: 0.9rem; transition: border-color 0.2s, box-shadow 0.2s; outline: none; }
+  input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,229,160,0.1); }
+  input::placeholder { color: var(--text-muted); }
+
+  .btn-full { width: 100%; justify-content: center; margin-top: 1.5rem; padding: 14px; font-size: 0.95rem; }
+  .auth-footer { text-align: center; margin-top: 1.5rem; font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted); }
+  .auth-footer a { color: var(--accent); cursor: pointer; text-decoration: none; }
+  .auth-footer a:hover { text-decoration: underline; }
+
+  .alert { padding: 12px 16px; border-radius: 8px; font-family: var(--font-mono); font-size: 0.82rem; margin-bottom: 1rem; display: none; }
+  .alert.show { display: block; }
+  .alert-success { background: rgba(0,229,160,0.1); border: 1px solid rgba(0,229,160,0.3); color: var(--accent); }
+  .alert-error { background: rgba(255,107,107,0.1); border: 1px solid rgba(255,107,107,0.3); color: var(--accent3); }
+
+  .spinner { width: 16px; height: 16px; border: 2px solid transparent; border-top-color: currentColor; border-radius: 50%; animation: spin 0.6s linear infinite; display: none; }
+  .btn.loading .spinner { display: inline-block; }
+  .btn.loading .btn-text { opacity: 0.7; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.2rem 2rem; background: rgba(10,10,15,0.8);
+    backdrop-filter: blur(12px); border-bottom: 1px solid rgba(42,42,62,0.5);
+  }
+  .nav-logo { font-weight: 800; font-size: 1.1rem; letter-spacing: -0.02em; cursor: pointer; }
+  .nav-logo span { color: var(--accent); }
+  .nav-links { display: flex; gap: 0.5rem; }
+  .nav-link { font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted); cursor: pointer; padding: 8px 16px; border-radius: 6px; transition: all 0.2s; }
+  .nav-link:hover { color: var(--text); background: var(--surface); }
+  .nav-link.accent { color: var(--accent); }
+
+  @keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+
+  @media (max-width: 600px) {
+    .features { grid-template-columns: 1fr; }
+    .stats { gap: 1.5rem; }
+    .hero h1 { font-size: 2.8rem; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-logo" onclick="showPage('home')">Northwind<span>Nexus</span></div>
+  <div class="nav-links" id="nav-links">
+    <div class="nav-link" onclick="showPage('login')">Iniciar sesión</div>
+    <div class="nav-link accent" onclick="showPage('register')">Registrarse</div>
+  </div>
+</nav>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<!-- ══ LANDING ══ -->
+<div id="page-home" class="page active">
+  <div class="hero">
+    <div class="badge">NORTHWIND DATABASE MANAGER</div>
+    <h1>Gestión de datos<br><span class="green">sin</span> <span class="purple">fricción</span></h1>
+    <p>Una interfaz moderna para administrar la base de datos Northwind. Productos, empleados, pedidos y proveedores — todo desde un solo lugar.</p>
+    <div class="hero-btns">
+      <button class="btn btn-primary" onclick="showPage('register')">Crear cuenta →</button>
+      <button class="btn btn-ghost" onclick="showPage('login')">Iniciar sesión</button>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-num">3</div><div class="stat-label">Módulos</div></div>
+    <div class="stat"><div class="stat-num">REST</div><div class="stat-label">API</div></div>
+    <div class="stat"><div class="stat-num">JWT</div><div class="stat-label">Auth</div></div>
+    <div class="stat"><div class="stat-num">∞</div><div class="stat-label">Registros</div></div>
+  </div>
+
+  <div class="features">
+    <div class="feature" onclick="goToModule('inventario')">
+      <div class="feature-icon">📦</div>
+      <h3>Inventario</h3>
+      <p>Gestión de productos, categorías y proveedores con relaciones completas.</p>
+    </div>
+    <div class="feature" onclick="goToModule('rrhh')">
+      <div class="feature-icon">👥</div>
+      <h3>RRHH</h3>
+      <p>Empleados, territorios y regiones. Jerarquías y subordinados.</p>
+    </div>
+    <div class="feature" onclick="goToModule('ventas')">
+      <div class="feature-icon">🛒</div>
+      <h3>Ventas</h3>
+      <p>Órdenes de compra, detalles de pedido y clientes en tiempo real.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LOGIN ══ -->
+<div id="page-login" class="page">
+  <div class="auth-card">
+    <div class="auth-back" onclick="showPage('home')">← Volver al inicio</div>
+    <div class="auth-header">
+      <span class="logo-small">NORTHWIND NEXUS</span>
+      <h2>Bienvenido de vuelta</h2>
+      <p>Ingresá tus credenciales para continuar</p>
+    </div>
+    <div id="login-alert" class="alert"></div>
+    <div class="form-group">
+      <label>Usuario</label>
+      <input type="text" id="login-username" placeholder="tu_usuario" autocomplete="username" />
+    </div>
+    <div class="form-group">
+      <label>Contraseña</label>
+      <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password" />
+    </div>
+    <button class="btn btn-primary btn-full" id="btn-login" onclick="handleLogin()">
+      <span class="spinner"></span>
+      <span class="btn-text">Iniciar sesión</span>
+    </button>
+    <div class="auth-footer">¿No tenés cuenta? <a onclick="showPage('register')">Registrate</a></div>
+  </div>
+</div>
+
+<!-- ══ REGISTER ══ -->
+<div id="page-register" class="page">
+  <div class="auth-card">
+    <div class="auth-back" onclick="showPage('home')">← Volver al inicio</div>
+    <div class="auth-header">
+      <span class="logo-small">NORTHWIND NEXUS</span>
+      <h2>Crear cuenta</h2>
+      <p>Un administrador asignará tu rol luego del registro</p>
+    </div>
+    <div id="register-alert" class="alert"></div>
+    <div class="form-group">
+      <label>Usuario</label>
+      <input type="text" id="reg-username" placeholder="tu_usuario" autocomplete="username" />
+    </div>
+    <div class="form-group">
+      <label>Email <span style="color:var(--text-muted);font-size:0.7rem">(opcional)</span></label>
+      <input type="email" id="reg-email" placeholder="tu@email.com" autocomplete="email" />
+    </div>
+    <div class="form-group">
+      <label>Contraseña</label>
+      <input type="password" id="reg-password" placeholder="••••••••" autocomplete="new-password" />
+    </div>
+    <div class="form-group">
+      <label>Confirmar contraseña</label>
+      <input type="password" id="reg-password2" placeholder="••••••••" autocomplete="new-password" />
+    </div>
+    <button class="btn btn-primary btn-full" id="btn-register" onclick="handleRegister()">
+      <span class="spinner"></span>
+      <span class="btn-text">Crear cuenta →</span>
+    </button>
+    <div class="auth-footer">¿Ya tenés cuenta? <a onclick="showPage('login')">Iniciá sesión</a></div>
+  </div>
+</div>
+
+<script>
+  function showPage(name) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + name).classList.add('active');
+    window.scrollTo(0, 0);
+  }
+
+  function showAlert(id, msg, type) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.className = `alert alert-${type} show`;
+  }
+
+  function setLoading(btnId, loading) {
+    const btn = document.getElementById(btnId);
+    btn.classList.toggle('loading', loading);
+    btn.disabled = loading;
+  }
+
+  function goToModule(modulo) {
+    const token = localStorage.getItem('access');
+    if (!token) {
+      showPage('login');
+      return;
+    }
+    window.location.href = `/base/${modulo}/`;
+  }
+
+  function updateNav() {
+  const token = localStorage.getItem('access');
+  const nav = document.getElementById('nav-links');
+  if (token) {
+    nav.innerHTML = `
+      <div class="nav-link" onclick="goToModule('inventario')">📦 Inventario</div>
+      <div class="nav-link" onclick="goToModule('rrhh')">👥 RRHH</div>
+      <div class="nav-link" onclick="goToModule('ventas')">🛒 Ventas</div>
+      <div class="nav-link accent" onclick="logout()">Cerrar sesión</div>
+    `;
+  } else {
+    nav.innerHTML = `
+      <div class="nav-link" onclick="showPage('login')">Iniciar sesión</div>
+      <div class="nav-link accent" onclick="showPage('register')">Registrarse</div>
+    `;
+  }
+}
+
+  function logout() {
+    localStorage.removeItem('access');
+    localStorage.removeItem('refresh');
+    updateNav();
+    showPage('home');
+  }
+
+  async function handleLogin() {
+    const username = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value;
+    if (!username || !password) { showAlert('login-alert', 'Completá todos los campos.', 'error'); return; }
+    setLoading('btn-login', true);
+    try {
+      const res = await fetch('/api/login/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('access', data.access);
+        localStorage.setItem('refresh', data.refresh);
+        showAlert('login-alert', '✓ Sesión iniciada. Redirigiendo...', 'success');
+        updateNav();
+        showAlert('login-alert', '✓ Sesión iniciada correctamente.', 'success');
+        updateNav();
+        setTimeout(() => showPage('home'), 1000);
+      } else {
+        showAlert('login-alert', data.detail || 'Credenciales incorrectas.', 'error');
+      }
+    } catch (e) {
+      showAlert('login-alert', 'Error de conexión con el servidor.', 'error');
+    } finally {
+      setLoading('btn-login', false);
+    }
+  }
+
+  async function handleRegister() {
+    const username = document.getElementById('reg-username').value.trim();
+    const email    = document.getElementById('reg-email').value.trim();
+    const password = document.getElementById('reg-password').value;
+    const password2 = document.getElementById('reg-password2').value;
+    if (!username || !password) { showAlert('register-alert', 'Usuario y contraseña son obligatorios.', 'error'); return; }
+    if (password !== password2) { showAlert('register-alert', 'Las contraseñas no coinciden.', 'error'); return; }
+    if (password.length < 6) { showAlert('register-alert', 'La contraseña debe tener al menos 6 caracteres.', 'error'); return; }
+    setLoading('btn-register', true);
+    try {
+      const res = await fetch('/api/register/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password })
+      });
+      const data = await res.json();
+      if (res.status === 201) {
+        showAlert('register-alert', `✓ Cuenta creada para "${data.username}". Un administrador asignará tu rol.`, 'success');
+        ['reg-username','reg-email','reg-password','reg-password2'].forEach(id => document.getElementById(id).value = '');
+      } else {
+        showAlert('register-alert', data.error || 'Error al crear la cuenta.', 'error');
+      }
+    } catch (e) {
+      showAlert('register-alert', 'Error de conexión con el servidor.', 'error');
+    } finally {
+      setLoading('btn-register', false);
+    }
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    const active = document.querySelector('.page.active');
+    if (active.id === 'page-login') handleLogin();
+    if (active.id === 'page-register') handleRegister();
+  });
+
+  updateNav();
+</script>
+</body>
+</html>

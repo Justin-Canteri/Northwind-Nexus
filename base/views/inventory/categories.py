@@ -19,7 +19,7 @@ class CategoriesListCreateView(APIView):
 
          serializer = categoriesSerializer(resultado, many=True)
 
-         return (serializer.data)
+         return Response(serializer.data)
 
     def post(self, request):
          

@@ -22,11 +22,14 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
-
+from base.views import views
+from base.views import register
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('base.urls')),
+    path('base/', include('base.urls')),
+    path('', views.inicio),
 
+    path('api/register/', register.registrar_usuario),
     # Esta ruta es para hacer LOGIN (obtener el token)
     path('api/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     

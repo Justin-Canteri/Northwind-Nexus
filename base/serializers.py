@@ -7,18 +7,15 @@ class RegionSerializer(serializers.ModelSerializer):
     class Meta:
         model = rrhh.Region
         # Aquí eliges qué campos quieres que "viajen" por la API
-        fields = [
-            'id', 'description'
-        ]
+        fields = '__all__'
         # O puedes usar '__all__' para incluirlos todos
 
 class TerritorySerializer(serializers.ModelSerializer):
+    region = RegionSerializer(read_only = True)
     class Meta:
         model = rrhh.Territory
         # Aquí eliges qué campos quieres que "viajen" por la API
-        fields = [
-            'id', 'description', 'region'
-        ]
+        fields = '__all__'
         # O puedes usar '__all__' para incluirlos todos
 
 
@@ -26,18 +23,15 @@ class EmployeeSerializer(serializers.ModelSerializer):
     class Meta:
         model = rrhh.Employee
         # Aquí eliges qué campos quieres que "viajen" por la API
-        fields = [
-            'id', 'first_name', 'last_name', 'title', 
-            'birth_date', 'hire_date', 'city', 'country', 'reports_to'
-        ]
+        fields = '__all__'
         # O puedes usar '__all__' para incluirlos todos
 class EmployeeTerritorySerializer(serializers.ModelSerializer):
+    territory = TerritorySerializer(read_only = True)
+    employee = EmployeeSerializer(read_only=True) 
     class Meta:
         model = rrhh.EmployeeTerritory
         # Aquí eliges qué campos quieres que "viajen" por la API
-        fields = [
-            'employee', 'territory'
-        ]
+        fields = '__all__'
         # O puedes usar '__all__' para incluirlos todos
 '''----------------------------------------------------------------------------'''
 
@@ -68,25 +62,17 @@ class ProductoSerializer(serializers.ModelSerializer):
 class CustomerSerializer(serializers.ModelSerializer):
     class Meta:
         model = ventas.Customer
-        fields = [
-            '__all__'
-        ]
+        fields = '__all__'
 class ShipperSerializer(serializers.ModelSerializer):
     class Meta:
         model = ventas.Shipper
-        fields = [
-            '__all__'
-        ]
+        fields = '__all__'
 class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = ventas.Order
-        fields = [
-            '__all__'
-        ]
+        fields = '__all__'
 class OrderDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = ventas.OrderDetail
-        fields = [
-            '__all__'
-        ]
+        fields = '__all__'
 '''----------------------------------------------------------------------------'''
