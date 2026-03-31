@@ -14,65 +14,59 @@ from ..permissions import IsVentas  # Importamos tu clase de permiso
 from ...models.ventas import Customer
 from ...serializers import CustomerSerializer
 
+from ....configuracion.logger_config import setup_logging
+
 class CustomerListCreateView(APIView):
-    """
-    Lista clientes (con filtro por nombre de empresa) y permite crear nuevos.
-    """
     permission_classes = [IsAuthenticated, IsVentas]
 
     def get(self, request):        
         resultados = Customer.objects.all()
-        
-        # 2. Serialización
         serializer = CustomerSerializer(resultados, many=True)
         return Response(serializer.data)
 
     def post(self, request):
-        # 3. Creación: El ID debe ser enviado (5 caracteres)
         serializer = CustomerSerializer(data=request.data)
+        audit_log = logger.bind(audit=True, user=request.user.username)
+
         if serializer.is_valid():
-            serializer.save()
+            customer = serializer.save()
+            audit_log.info(f"CLIENTE REGISTRADO: {customer.company_name} (ID: {customer.id})")
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 class CustomerDetailView(APIView):
-    """
-    Obtener, actualizar o eliminar un cliente específico por su ID de 5 letras.
-    """
     permission_classes = [IsAuthenticated, IsVentas]
 
-    def get(self, id_cliente):
+    def get(self, request, id_cliente): # Añadido 'request' que faltaba
         try:
             customer_Obtenido = Customer.objects.get(id=id_cliente)
             serializer = CustomerSerializer(customer_Obtenido)
-
             return Response(serializer.data)
-        
         except Customer.DoesNotExist:
             return Response({"error": "No existe"}, status=404)
 
     def put(self, request, id_cliente):
-
+        audit_log = logger.bind(audit=True, user=request.user.username)
         try:
-            Producto_Obtenido = Customer.objects.get(id = id_cliente)
-
-            serializer  = CustomerSerializer(Producto_Obtenido, data = request.data)
-
+            cliente = Customer.objects.get(id=id_cliente)
+            serializer = CustomerSerializer(cliente, data=request.data)
             if serializer.is_valid():
                 serializer.save()
+                audit_log.info(f"CLIENTE ACTUALIZADO: ID {id_cliente} - {cliente.company_name}")
                 return Response(serializer.data)
-            return Response (serializer.errors,status=400)
+            return Response(serializer.errors, status=400)
         except Customer.DoesNotExist:
             return Response({"error": "No existe"}, status=404)
 
-        
-
     def delete(self, request, id_cliente):
+        audit_log = logger.bind(audit=True, user=request.user.username)
         try:
-            ClienteAeliminar = Customer.objects.get(id = id_cliente)
-            ClienteAeliminar.delete()
+            cliente = Customer.objects.get(id=id_cliente)
+            nombre = cliente.company_name
+            cliente.delete()
+            audit_log.info(f"CLIENTE ELIMINADO: {nombre} (ID: {id_cliente})")
             return Response({"mensaje": f"cliente {id_cliente} eliminado"}, status=204)
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error al eliminar cliente {id_cliente}: {str(e)}")
             return Response({"error": "No se puede eliminar: tiene datos asociados"}, status=400)

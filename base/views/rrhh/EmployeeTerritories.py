@@ -12,62 +12,33 @@ from ..permissions import IsRRHH  # Importamos tu clase nueva
 #serializer
 from ...serializers import EmployeeTerritorySerializer
 
+from ....configuracion.logger_config import setup_logging
+
+
 
 class EmployeeTerritoriesCreateView(APIView):
     permission_classes = [IsAuthenticated, IsRRHH]
 
-    def get(self, request):
-        territorios = EmployeeTerritory.objects.select_related(
-            'employee', 
-            'territory', 
-            'territory__region'  # dentro de territory está region 
-        ).all()
-        serializer = EmployeeTerritorySerializer(territorios, many=True)
-        return Response(serializer.data)
-
     def post(self, request):
         serializer = EmployeeTerritorySerializer(data=request.data)
+        audit_log = logger.bind(audit=True, user=request.user.username)
 
         if serializer.is_valid():
-            serializer.save()
+            et = serializer.save()
+            audit_log.info(f"ASIGNACIÓN DE TERRITORIO: Empleado {et.employee_id} -> Territorio {et.territory_id}")
             return Response(serializer.data, status=201)
-        
         return Response(serializer.errors, status=400)
-
 
 class EmployeeTerritoriesDetailView(APIView):
     permission_classes = [IsAuthenticated, IsRRHH]
 
-    def get(self, request, id_EmployeeTerritory):
-        try:
-            et_obtenido = EmployeeTerritory.objects.select_related(
-                'employee',
-                'territory',
-                'territory__region'
-            ).get(employee_id=id_EmployeeTerritory)
-
-            serializer = EmployeeTerritorySerializer(et_obtenido)
-            return Response(serializer.data)
-        except EmployeeTerritory.DoesNotExist:
-            return Response({"error": "No existe"}, status=404)
-
-    def put(self, request, id_EmployeeTerritory):
-        try:
-            et_obtenido = EmployeeTerritory.objects.get(employee_id=id_EmployeeTerritory)
-
-            serializer = EmployeeTerritorySerializer(et_obtenido, data=request.data)
-
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data)
-            return Response(serializer.errors, status=400)
-        except EmployeeTerritory.DoesNotExist:
-            return Response({"error": "No existe"}, status=404)
-
     def delete(self, request, id_EmployeeTerritory):
+        audit_log = logger.bind(audit=True, user=request.user.username)
         try:
             et_obtenido = EmployeeTerritory.objects.get(employee_id=id_EmployeeTerritory)
+            territorio_id = et_obtenido.territory_id
             et_obtenido.delete()
-            return Response({"mensaje": f"EmployeeTerritory {id_EmployeeTerritory} eliminado"}, status=204)
+            audit_log.info(f"DESASIGNACIÓN DE TERRITORIO: Empleado {id_EmployeeTerritory} perdió territorio {territorio_id}")
+            return Response(status=204)
         except EmployeeTerritory.DoesNotExist:
             return Response({"error": "No existe"}, status=404)

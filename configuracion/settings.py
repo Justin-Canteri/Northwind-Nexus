@@ -14,6 +14,12 @@ import environ
 import os
 from pathlib import Path
 
+#logger
+from .logger_config import setup_logging
+
+#inicio sistema de logger
+setup_logging()
+
 #----------------------------- Traigo evron
 # Inicializar environ
 env = environ.Env(

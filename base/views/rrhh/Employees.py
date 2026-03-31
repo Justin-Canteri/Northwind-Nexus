@@ -10,64 +10,48 @@ from ..permissions import IsRRHH  # Importamos tu clase nueva
 
 from ...serializers import EmployeeSerializer
 
+from ....configuracion.logger_config import setup_logging
+
+
 class EmployeeListCreateView(APIView):
-    # EL ESCUDO: Aplica para TODO lo que esté aquí adentro
     permission_classes = [IsAuthenticated, IsRRHH]
-
-    def get(self, request):
-        # 1. Traemos los datos de la DB
-        empleados = Employee.objects.all()
-        
-        seriealizer = EmployeeSerializer(empleados, many=True)
-
-        return Response(seriealizer.data)
-    
 
     def post(self, request):
-        # Pasamos el JSON directo de Postman al traductor (Serializer)
         serializer = EmployeeSerializer(data=request.data)
-        
+        audit_log = logger.bind(audit=True, user=request.user.username)
+
         if serializer.is_valid():
-            # Si los datos son correctos, guarda en la DB
-            serializer.save() 
-            # Devolvemos el objeto creado (con su nuevo ID) como respuesta
+            empleado = serializer.save()
+            audit_log.info(f"EMPLEADO CONTRATADO: {empleado.first_name} {empleado.last_name} (ID: {empleado.id})")
             return Response(serializer.data, status=201)
         
-        # Si el JSON estaba mal (ej: faltó un campo), enviamos el error
+        logger.warning(f"Error al contratar empleado por {request.user.username}: {serializer.errors}")
         return Response(serializer.errors, status=400)
-    
 
 class EmployeeDetailView(APIView):
-    # El mismo escudo de seguridad
     permission_classes = [IsAuthenticated, IsRRHH]
 
-    def get(self, request, id_empleado):
-        try:
-            empleado = Employee.objects.get(id = id_empleado)
-
-            serializer = EmployeeSerializer(empleado)
-            return Response (serializer.data)
-        except Employee.DoesNotExist:
-            return Response({"error": "No existe"}, status=404)
-        
-
     def put(self, request, id_empleado):
+        audit_log = logger.bind(audit=True, user=request.user.username)
         try:
             empleado = Employee.objects.get(id=id_empleado)
-            # Pasamos el objeto existente Y los nuevos datos
             serializer = EmployeeSerializer(empleado, data=request.data)
-            
             if serializer.is_valid():
                 serializer.save()
+                audit_log.info(f"EMPLEADO ACTUALIZADO: ID {id_empleado}")
                 return Response(serializer.data)
             return Response(serializer.errors, status=400)
         except Employee.DoesNotExist:
             return Response({"error": "No existe"}, status=404)
 
     def delete(self, request, id_empleado):
+        audit_log = logger.bind(audit=True, user=request.user.username)
         try:
             e = Employee.objects.get(id=id_empleado)
+            nombre = f"{e.first_name} {e.last_name}"
             e.delete()
-            return Response({"mensaje": f"Empleado {id_empleado} eliminado"})
-        except Exception:
+            audit_log.info(f"EMPLEADO ELIMINADO: {nombre} (ID: {id_empleado})")
+            return Response({"mensaje": "Eliminado"}, status=204)
+        except Exception as e:
+            logger.error(f"Error al eliminar empleado {id_empleado}: {str(e)}")
             return Response({"error": "No se puede eliminar: tiene datos asociados"}, status=400)

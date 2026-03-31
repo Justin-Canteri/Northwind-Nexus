@@ -14,61 +14,50 @@ from ..permissions import IsVentas
 from ...models.ventas import Order
 from ...serializers import OrderSerializer
 
+from ....configuracion.logger_config import setup_logging
+
 class OrderListCreateView(APIView):
-    """
-    Lista órdenes (con filtro por ID de orden o cliente) y crea nuevas.
-    """
     permission_classes = [IsAuthenticated, IsVentas]
 
     def get(self, request):
-        
-        # Optimizamos la consulta para traer datos del cliente y el empleado de una vez
         queryset = Order.objects.select_related('customer', 'employee', 'ship_via').all()
-        
         serializer = OrderSerializer(queryset, many=True)
         return Response(serializer.data)
 
     def post(self, request):
-        # 2. Creación usando el Serializer
         serializer = OrderSerializer(data=request.data)
+        audit_log = logger.bind(audit=True, user=request.user.username)
+
         if serializer.is_valid():
-            serializer.save()
+            order = serializer.save()
+            audit_log.info(f"ORDEN CREADA: ID {order.id} para Cliente {order.customer_id}")
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 class OrderDetailView(APIView):
-    """
-    Detalle, edición y borrado de una orden específica.
-    """
     permission_classes = [IsAuthenticated, IsVentas]
 
-    def get_object(self, id_order):
-        try:
-            orden_obtenida = Order.objects.select_related('customer', 'employee').get(id=id_order)
-            serializer = OrderSerializer(orden_obtenida)
-            return Response(serializer.data)
-        except Order.DoesNotExist:
-            return Response({"error": "No existe"}, status=404)
-
     def put(self, request, id_order):
-
+        audit_log = logger.bind(audit=True, user=request.user.username)
         try:
-            orden_obtenida = Order.objects.get(id=id_order)
-
-            serializer = OrderSerializer(orden_obtenida, data = request.data)
-
+            orden = Order.objects.get(id=id_order)
+            serializer = OrderSerializer(orden, data=request.data)
             if serializer.is_valid():
+                serializer.save() # Faltaba el .save() en tu código original
+                audit_log.info(f"ORDEN MODIFICADA: ID {id_order}")
                 return Response(serializer.data)
             return Response(serializer.errors, status=400)
         except Order.DoesNotExist:
-            return Response({"error": "Noxiste"}, status=404)
-           
+            return Response({"error": "No existe"}, status=404)
+
     def delete(self, request, id_order):
+        audit_log = logger.bind(audit=True, user=request.user.username)
         try:
-            productoAeliminar = Order.objects.get(id = id_order)
-            productoAeliminar.delete()
+            orden = Order.objects.get(id=id_order)
+            orden.delete()
+            audit_log.info(f"ORDEN ELIMINADA: ID {id_order}")
             return Response({"mensaje": f"orden {id_order} eliminada"}, status=204)
-        except Exception:
-            return Response({"error": "No se puede eliminar: tiene datos asociados"}, status=400)
+        except Exception as e:
+            logger.error(f"Fallo crítico al eliminar orden {id_order}: {str(e)}")
+            return Response({"error": "No se puede eliminar: tiene detalles asociados"}, status=400)

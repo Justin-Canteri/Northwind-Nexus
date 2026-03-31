@@ -11,75 +11,53 @@ from ..permissions import IsRRHH  # Asegúrate de que la ruta sea correcta
 from ...models.rrhh import Region
 from ...serializers import RegionSerializer
 
+from ....configuracion.logger_config import setup_logging
+
 class RegionListCreateView(APIView):
-    """
-    Lista todas las regiones (con filtro por nombre) y permite crear nuevas.
-    """
     permission_classes = [IsAuthenticated, IsRRHH]
 
     def get(self, request):
-        # 1. Filtro por nombre (query params)
         busqueda = request.query_params.get('nombre')
-        if busqueda:
-            resultados = Region.objects.filter(description__icontains=busqueda)
-        else:
-            resultados = Region.objects.all()
-        
-        # 2. Serialización
+        resultados = Region.objects.filter(description__icontains=busqueda) if busqueda else Region.objects.all()
         serializer = RegionSerializer(resultados, many=True)
         return Response(serializer.data)
 
     def post(self, request):
-        # 3. Creación con validación de Serializer
         serializer = RegionSerializer(data=request.data)
+        audit_log = logger.bind(audit=True, user=request.user.username)
+
         if serializer.is_valid():
-            serializer.save()
+            region = serializer.save()
+            audit_log.info(f"REGIÓN CREADA: {region.description} (ID: {region.id})")
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 class RegionDetailView(APIView):
-    """
-    Obtener, actualizar o eliminar una región específica.
-    """
     permission_classes = [IsAuthenticated, IsRRHH]
 
-    def get_object(self, id_region):
-        try:
-            return Region.objects.get(id=id_region)
-        except Region.DoesNotExist:
-            return None
-
-    def get(self, request, id_region):
-        region = self.get_object(id_region)
-        if not region:
-            return Response({"error": "La región no existe"}, status=status.HTTP_404_NOT_FOUND)
-        
-        serializer = RegionSerializer(region)
-        return Response(serializer.data)
-
     def put(self, request, id_region):
-        region = self.get_object(id_region)
-        if not region:
+        try:
+            region = Region.objects.get(id=id_region)
+            audit_log = logger.bind(audit=True, user=request.user.username)
+            serializer = RegionSerializer(region, data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                audit_log.info(f"REGIÓN ACTUALIZADA: ID {id_region}")
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Region.DoesNotExist:
             return Response({"error": "La región no existe"}, status=status.HTTP_404_NOT_FOUND)
-
-        serializer = RegionSerializer(region, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, id_region):
-        region = self.get_object(id_region)
-        if not region:
-            return Response({"error": "La región no existe"}, status=status.HTTP_404_NOT_FOUND)
-        
         try:
+            region = Region.objects.get(id=id_region)
+            audit_log = logger.bind(audit=True, user=request.user.username)
             region.delete()
+            audit_log.info(f"REGIÓN ELIMINADA: ID {id_region}")
             return Response({"mensaje": f"Región {id_region} eliminada"}, status=status.HTTP_204_NO_CONTENT)
-        except Exception:
-            return Response(
-                {"error": "No se puede eliminar: existen territorios vinculados"}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        except Region.DoesNotExist:
+            return Response({"error": "No existe"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Error al eliminar región {id_region}: {str(e)}")
+            return Response({"error": "No se puede eliminar: existen territorios vinculados"}, status=status.HTTP_400_BAD_REQUEST)
